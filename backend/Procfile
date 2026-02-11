@@ -1,0 +1,1 @@
+web: gunicorn gyaan_saarthi.wsgi:application
