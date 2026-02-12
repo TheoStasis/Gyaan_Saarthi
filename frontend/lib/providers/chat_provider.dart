@@ -36,56 +36,85 @@ class ChatProvider with ChangeNotifier {
   Future<void> sendTextMessage(String message) async {
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    notifyListeners(); 
 
     try {
+      final userMessage = Message(
+        id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+        role: 'user',
+        messageType: 'text',
+        textContent: message,
+        createdAt: DateTime.now(),
+      );
+
+      if (_currentConversation != null) {
+        _currentConversation!.messages.add(userMessage);
+        notifyListeners(); 
+      }
+
       final result = await _aiService.sendTextMessage(
         conversationId: _currentConversation?.id,
         message: message,
       );
 
       if (result['success']) {
-        // Add user message
-        final userMessage = Message(
-          id: DateTime.now().toString(),
-          role: 'user',
-          messageType: 'text',
-          textContent: message,
-          createdAt: DateTime.now(),
-        );
-
-        // Add AI response
         final aiMessage = result['message'] as Message;
 
         if (_currentConversation == null) {
           _currentConversation = Conversation(
             id: result['conversationId'],
-            title: 'New Chat',
+            title: message.length > 30 ? "${message.substring(0, 30)}..." : message,
             subject: 'general',
             language: 'hindi',
             messageCount: 2,
             isActive: true,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
-            messages: [userMessage, aiMessage],
+            messages: [userMessage, aiMessage], 
           );
         } else {
+          _currentConversation!.messages.add(aiMessage);
+        }
+      } else {
+        _error = result['error'];
+        _currentConversation?.messages.remove(userMessage);
+      }
+    } catch (e) {
+      _error = "Server connection timed out. Check Ollama on P: drive.";
+    }
+
+    _isLoading = false;
+    notifyListeners(); 
+  }
+
+  Future<void> sendAudioMessage(File audioFile) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _aiService.sendAudioMessage(
+        conversationId: _currentConversation?.id,
+        audioFile: audioFile,
+      );
+
+      if (result['success']) {
+        final aiMessage = result['message'] as Message;
+        
+        if (_currentConversation == null) {
           _currentConversation = Conversation(
-            id: _currentConversation!.id,
-            title: _currentConversation!.title,
-            subject: _currentConversation!.subject,
-            classLevel: _currentConversation!.classLevel,
-            language: _currentConversation!.language,
-            messageCount: _currentConversation!.messageCount + 2,
-            isActive: _currentConversation!.isActive,
-            createdAt: _currentConversation!.createdAt,
+            id: result['conversationId'],
+            title: 'Audio Chat',
+            subject: 'general',
+            language: 'hindi',
+            messageCount: 1,
+            isActive: true,
+            createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
-            messages: [
-              ..._currentConversation!.messages,
-              userMessage,
-              aiMessage,
-            ],
+            messages: [aiMessage],
           );
+        } else {
+          _currentConversation!.messages.add(aiMessage);
         }
       } else {
         _error = result['error'];
@@ -98,32 +127,10 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> sendAudioMessage(File audioFile) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final result = await _aiService.sendAudioMessage(
-        conversationId: _currentConversation?.id,
-        audioFile: audioFile,
-      );
-
-      if (result['success']) {
-        final message = result['message'] as Message;
-        _currentConversation?.messages.add(message);
-      } else {
-        _error = result['error'];
-      }
-    } catch (e) {
-      _error = e.toString();
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
+  // FIXED: Separated from sendAudioMessage and added missing brace
   Future<void> sendImageMessage(File imageFile, {String? message}) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -135,7 +142,22 @@ class ChatProvider with ChangeNotifier {
 
       if (result['success']) {
         final aiMessage = result['message'] as Message;
-        _currentConversation?.messages.add(aiMessage);
+        
+        if (_currentConversation == null) {
+          _currentConversation = Conversation(
+            id: result['conversationId'],
+            title: 'Image Question',
+            subject: 'general',
+            language: 'hindi',
+            messageCount: 1,
+            isActive: true,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            messages: [aiMessage],
+          );
+        } else {
+          _currentConversation!.messages.add(aiMessage);
+        }
       } else {
         _error = result['error'];
       }
