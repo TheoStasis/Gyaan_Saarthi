@@ -20,14 +20,12 @@ class AIService {
   Future<List<Conversation>> getConversations() async {
     try {
       final token = await _getToken();
-
       final response = await _dio.get(
         ApiConfig.conversations,
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
         ),
       );
-
       return (response.data as List)
           .map((json) => Conversation.fromJson(json))
           .toList();
@@ -44,7 +42,6 @@ class AIService {
   }) async {
     try {
       final token = await _getToken();
-
       final response = await _dio.post(
         ApiConfig.chatText,
         data: {
@@ -57,7 +54,7 @@ class AIService {
           headers: {'Authorization': 'Bearer $token'},
         ),
       );
-
+      
       return {
         'success': true,
         'conversationId': response.data['conversation_id'],
@@ -79,7 +76,6 @@ class AIService {
   }) async {
     try {
       final token = await _getToken();
-
       FormData formData = FormData.fromMap({
         if (conversationId != null) 'conversation_id': conversationId,
         'audio_file': await MultipartFile.fromFile(audioFile.path),
@@ -119,7 +115,6 @@ class AIService {
   }) async {
     try {
       final token = await _getToken();
-
       FormData formData = FormData.fromMap({
         if (conversationId != null) 'conversation_id': conversationId,
         'image': await MultipartFile.fromFile(imageFile.path),
