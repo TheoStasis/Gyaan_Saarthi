@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../config/api_config.dart';
 import '../models/conversation_model.dart';
 import 'storage_service.dart';
@@ -13,13 +14,45 @@ class AIService {
     ),
   );
 
+  AIService() {
+    // Add interceptor for debugging
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          debugPrint('🔵 REQUEST: ${options.method} ${options.path}');
+          debugPrint('🔵 HEADERS: ${options.headers}');
+          debugPrint('🔵 DATA: ${options.data}');
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint('🟢 RESPONSE: ${response.statusCode}');
+          debugPrint('🟢 DATA: ${response.data}');
+          return handler.next(response);
+        },
+        onError: (error, handler) {
+          debugPrint('🔴 ERROR: ${error.response?.statusCode}');
+          debugPrint('🔴 ERROR DATA: ${error.response?.data}');
+          debugPrint('🔴 ERROR MESSAGE: ${error.message}');
+          return handler.next(error);
+        },
+      ),
+    );
+  }
+
   Future<String?> _getToken() async {
-    return await StorageService.getAccessToken();
+    final token = await StorageService.getAccessToken();
+    debugPrint('🔑 TOKEN: ${token ?? "NULL"}');
+    return token;
   }
 
   Future<List<Conversation>> getConversations() async {
     try {
       final token = await _getToken();
+      
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token found');
+      }
+      
       final response = await _dio.get(
         ApiConfig.conversations,
         options: Options(
@@ -42,6 +75,14 @@ class AIService {
   }) async {
     try {
       final token = await _getToken();
+      
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No authentication token found. Please login again.',
+        };
+      }
+      
       final response = await _dio.post(
         ApiConfig.chatText,
         data: {
@@ -51,7 +92,10 @@ class AIService {
           if (language != null) 'language': language,
         },
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
         ),
       );
       
@@ -61,9 +105,20 @@ class AIService {
         'message': Message.fromJson(response.data['message']),
       };
     } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'Authentication failed. Please login again.',
+        };
+      }
       return {
         'success': false,
-        'error': e.response?.data['error'] ?? 'Failed to send message',
+        'error': e.response?.data['error'] ?? e.message ?? 'Failed to send message',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Unexpected error: $e',
       };
     }
   }
@@ -76,6 +131,14 @@ class AIService {
   }) async {
     try {
       final token = await _getToken();
+      
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No authentication token found. Please login again.',
+        };
+      }
+      
       FormData formData = FormData.fromMap({
         if (conversationId != null) 'conversation_id': conversationId,
         'audio_file': await MultipartFile.fromFile(audioFile.path),
@@ -99,9 +162,20 @@ class AIService {
         'audioUrl': response.data['audio_url'],
       };
     } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'Authentication failed. Please login again.',
+        };
+      }
       return {
         'success': false,
-        'error': e.response?.data['error'] ?? 'Failed to send audio',
+        'error': e.response?.data['error'] ?? e.message ?? 'Failed to send audio',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Unexpected error: $e',
       };
     }
   }
@@ -115,6 +189,14 @@ class AIService {
   }) async {
     try {
       final token = await _getToken();
+      
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No authentication token found. Please login again.',
+        };
+      }
+      
       FormData formData = FormData.fromMap({
         if (conversationId != null) 'conversation_id': conversationId,
         'image': await MultipartFile.fromFile(imageFile.path),
@@ -137,9 +219,20 @@ class AIService {
         'message': Message.fromJson(response.data['message']),
       };
     } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'Authentication failed. Please login again.',
+        };
+      }
       return {
         'success': false,
-        'error': e.response?.data['error'] ?? 'Failed to send image',
+        'error': e.response?.data['error'] ?? e.message ?? 'Failed to send image',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Unexpected error: $e',
       };
     }
   }
