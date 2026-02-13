@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'dart:math';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,9 +23,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ChatProvider>(context, listen: false).loadConversations();
-    });
+    // ✅ REMOVED loadConversations - don't load on every init
+    // This was overwriting the new messages!
   }
 
   @override
@@ -39,45 +36,50 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _sendTextMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
     final message = _messageController.text.trim();
+    debugPrint('📱 [CHAT_SCREEN] Sending: $message');
+    
     _messageController.clear();
 
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    
+    debugPrint('📱 [CHAT_SCREEN] Before: ${chatProvider.currentConversation?.messages.length ?? 0} messages');
+    
     await chatProvider.sendTextMessage(message);
-
+    
+    debugPrint('📱 [CHAT_SCREEN] After: ${chatProvider.currentConversation?.messages.length ?? 0} messages');
+    
     _scrollToBottom();
   }
 
   Future<void> _toggleRecording() async {
     if (_isRecording) {
-      // Stop recording
       final path = await _audioRecorder.stop();
       if (path != null) {
         setState(() {
           _isRecording = false;
         });
 
-        // Send audio message
-        // ignore: use_build_context_synchronously
         final chatProvider = Provider.of<ChatProvider>(context, listen: false);
         await chatProvider.sendAudioMessage(File(path));
 
         _scrollToBottom();
       }
     } else {
-      // Start recording
       if (await _audioRecorder.hasPermission()) {
         final dir = await getTemporaryDirectory();
         final path =
@@ -96,10 +98,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
-      // Show dialog to add optional text
       String? text = await _showImageTextDialog();
 
-      // ignore: use_build_context_synchronously
       final chatProvider = Provider.of<ChatProvider>(context, listen: false);
       await chatProvider.sendImageMessage(File(image.path), message: text);
 
@@ -147,40 +147,58 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context, chatProvider, child) {
         final messages = chatProvider.currentConversation?.messages ?? [];
         
-        // ✅ DEBUG PRINT
-        if (kDebugMode) {
-          print('🟣 [CHAT_SCREEN] Building UI with ${messages.length} messages');
-        }
-        if (messages.isNotEmpty) {
-          if (kDebugMode) {
-            print('🟣 [CHAT_SCREEN] Last message: ${messages.last.textContent.substring(0, min(50, messages.last.textContent.length))}...');
-          }
-        }
+        // ✅ Debug print
+        debugPrint('🟣 [CHAT_SCREEN] Building with ${messages.length} messages');
 
         return Column(
           children: [
             // Messages list
             Expanded(
-              child: chatProvider.isLoading && messages.isEmpty
+              child: chatProvider.isSending && messages.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : messages.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
-                          key: ValueKey(messages.length),  // ✅ KEY FOR LISTVIEW
+                          key: ValueKey('messages_${messages.length}'),  // ✅ ADD KEY
                           controller: _scrollController,
                           padding: const EdgeInsets.all(16),
                           itemCount: messages.length,
                           itemBuilder: (context, index) {
-                            if (kDebugMode) {
-                              print('🟣 [CHAT_SCREEN] Building message #$index');
-                            }
                             return MessageBubble(
-                              key: ValueKey(messages[index].id),  // ✅ KEY FOR EACH MESSAGE
+                              key: ValueKey(messages[index].id),  // ✅ ADD KEY
                               message: messages[index],
                             );
                           },
                         ),
             ),
+
+            // Loading indicator
+            if (chatProvider.isSending)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 8),
+                    Text('AI is thinking...'),
+                  ],
+                ),
+              ),
+
+            // Error message
+            if (chatProvider.error != null)
+              Container(
+                padding: EdgeInsets.all(8),
+                color: Colors.red.shade100,
+                child: Text(
+                  chatProvider.error!,
+                  style: TextStyle(color: Colors.red.shade900),
+                ),
+              ),
 
             // Input area
             Container(
@@ -189,7 +207,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: Theme.of(context).cardColor,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black,
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 4,
                     offset: const Offset(0, -2),
                   ),
@@ -224,7 +242,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     IconButton(
                       icon: const Icon(Icons.send),
                       onPressed:
-                          chatProvider.isLoading ? null : _sendTextMessage,
+                          chatProvider.isSending ? null : _sendTextMessage,
                     ),
                   ],
                 ),

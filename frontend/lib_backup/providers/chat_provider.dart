@@ -9,11 +9,13 @@ class ChatProvider with ChangeNotifier {
   List<Conversation> _conversations = [];
   Conversation? _currentConversation;
   bool _isLoading = false;
+  bool _isSending = false;  // ✅ Separate flag for sending
   String? _error;
 
   List<Conversation> get conversations => _conversations;
   Conversation? get currentConversation => _currentConversation;
   bool get isLoading => _isLoading;
+  bool get isSending => _isSending;  // ✅ Add getter
   String? get error => _error;
 
   Future<void> loadConversations() async {
@@ -22,11 +24,11 @@ class ChatProvider with ChangeNotifier {
 
     try {
       _conversations = await _aiService.getConversations();
-      if (_conversations.isNotEmpty) {
-        _currentConversation = _conversations.first;
-      }
+      // ✅ DON'T automatically set current conversation
+      // Let the UI handle this
     } catch (e) {
       _error = e.toString();
+      debugPrint('Error loading conversations: $e');
     }
 
     _isLoading = false;
@@ -34,33 +36,55 @@ class ChatProvider with ChangeNotifier {
   }
 
   Future<void> sendTextMessage(String message) async {
-    _isLoading = true;
+    debugPrint('🟢 [PROVIDER] Starting sendTextMessage: $message');
+    
+    _isSending = true;  // ✅ Use separate flag
     _error = null;
     notifyListeners();
 
     try {
+      // Create user message
+      final userMessage = Message(
+        id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+        role: 'user',
+        messageType: 'text',
+        textContent: message,
+        createdAt: DateTime.now(),
+      );
+
+      // ✅ Add user message immediately using copyWith
+      if (_currentConversation != null) {
+        _currentConversation = _currentConversation!.copyWith(
+          messages: [..._currentConversation!.messages, userMessage],
+          messageCount: _currentConversation!.messageCount + 1,
+          updatedAt: DateTime.now(),
+        );
+        notifyListeners(); // Show user message immediately
+        debugPrint('🟢 [PROVIDER] User message added. Total: ${_currentConversation!.messages.length}');
+      }
+
+      debugPrint('🟢 [PROVIDER] Calling AIService...');
+      
+      // Call backend
       final result = await _aiService.sendTextMessage(
         conversationId: _currentConversation?.id,
         message: message,
       );
 
-      if (result['success']) {
-        // Add user message
-        final userMessage = Message(
-          id: DateTime.now().toString(),
-          role: 'user',
-          messageType: 'text',
-          textContent: message,
-          createdAt: DateTime.now(),
-        );
+      debugPrint('🟢 [PROVIDER] Got result: ${result['success']}');
 
-        // Add AI response
+      if (result['success']) {
         final aiMessage = result['message'] as Message;
+        
+        debugPrint('🟢 [PROVIDER] AI message: ${aiMessage.textContent.substring(0, 50)}...');
 
         if (_currentConversation == null) {
+          // First message - create new conversation
+          debugPrint('🟢 [PROVIDER] Creating NEW conversation');
+          
           _currentConversation = Conversation(
-            id: result['conversationId'],
-            title: 'New Chat',
+            id: result['conversationId'] ?? DateTime.now().toString(),
+            title: message.length > 30 ? "${message.substring(0, 30)}..." : message,
             subject: 'general',
             language: 'hindi',
             messageCount: 2,
@@ -70,36 +94,46 @@ class ChatProvider with ChangeNotifier {
             messages: [userMessage, aiMessage],
           );
         } else {
-          _currentConversation = Conversation(
-            id: _currentConversation!.id,
-            title: _currentConversation!.title,
-            subject: _currentConversation!.subject,
-            classLevel: _currentConversation!.classLevel,
-            language: _currentConversation!.language,
-            messageCount: _currentConversation!.messageCount + 2,
-            isActive: _currentConversation!.isActive,
-            createdAt: _currentConversation!.createdAt,
+          // ✅ Add AI message using copyWith
+          debugPrint('🟢 [PROVIDER] Adding AI message');
+          
+          _currentConversation = _currentConversation!.copyWith(
+            messages: [..._currentConversation!.messages, aiMessage],
+            messageCount: _currentConversation!.messageCount + 1,
             updatedAt: DateTime.now(),
-            messages: [
-              ..._currentConversation!.messages,
-              userMessage,
-              aiMessage,
-            ],
           );
         }
+        
+        debugPrint('🟢 [PROVIDER] Total messages: ${_currentConversation!.messages.length}');
       } else {
+        debugPrint('🔴 [PROVIDER] Error: ${result['error']}');
         _error = result['error'];
+        
+        // ✅ Remove user message if failed using copyWith
+        if (_currentConversation != null) {
+          _currentConversation = _currentConversation!.copyWith(
+            messages: _currentConversation!.messages
+                .where((m) => m.id != userMessage.id)
+                .toList(),
+            messageCount: _currentConversation!.messageCount - 1,
+          );
+        }
       }
-    } catch (e) {
-      _error = e.toString();
+    } catch (e, stackTrace) {
+      debugPrint('🔴 [PROVIDER] Exception: $e');
+      debugPrint('🔴 [PROVIDER] Stack: $stackTrace');
+      _error = "Connection error. Check if Ollama is running.";
     }
 
-    _isLoading = false;
+    _isSending = false;
     notifyListeners();
+    
+    debugPrint('🟢 [PROVIDER] COMPLETED. Messages: ${_currentConversation?.messages.length ?? 0}');
   }
 
   Future<void> sendAudioMessage(File audioFile) async {
-    _isLoading = true;
+    _isSending = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -109,8 +143,26 @@ class ChatProvider with ChangeNotifier {
       );
 
       if (result['success']) {
-        final message = result['message'] as Message;
-        _currentConversation?.messages.add(message);
+        final aiMessage = result['message'] as Message;
+        
+        if (_currentConversation == null) {
+          _currentConversation = Conversation(
+            id: result['conversationId'],
+            title: 'Audio Chat',
+            subject: 'general',
+            language: 'hindi',
+            messageCount: 1,
+            isActive: true,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            messages: [aiMessage],
+          );
+        } else {
+          _currentConversation = _currentConversation!.copyWith(
+            messages: [..._currentConversation!.messages, aiMessage],
+            messageCount: _currentConversation!.messageCount + 1,
+          );
+        }
       } else {
         _error = result['error'];
       }
@@ -118,12 +170,13 @@ class ChatProvider with ChangeNotifier {
       _error = e.toString();
     }
 
-    _isLoading = false;
+    _isSending = false;
     notifyListeners();
   }
 
   Future<void> sendImageMessage(File imageFile, {String? message}) async {
-    _isLoading = true;
+    _isSending = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -135,7 +188,25 @@ class ChatProvider with ChangeNotifier {
 
       if (result['success']) {
         final aiMessage = result['message'] as Message;
-        _currentConversation?.messages.add(aiMessage);
+        
+        if (_currentConversation == null) {
+          _currentConversation = Conversation(
+            id: result['conversationId'],
+            title: 'Image Question',
+            subject: 'general',
+            language: 'hindi',
+            messageCount: 1,
+            isActive: true,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            messages: [aiMessage],
+          );
+        } else {
+          _currentConversation = _currentConversation!.copyWith(
+            messages: [..._currentConversation!.messages, aiMessage],
+            messageCount: _currentConversation!.messageCount + 1,
+          );
+        }
       } else {
         _error = result['error'];
       }
@@ -143,12 +214,17 @@ class ChatProvider with ChangeNotifier {
       _error = e.toString();
     }
 
-    _isLoading = false;
+    _isSending = false;
     notifyListeners();
   }
 
   void startNewConversation() {
     _currentConversation = null;
+    notifyListeners();
+  }
+
+  void setCurrentConversation(Conversation? conversation) {
+    _currentConversation = conversation;
     notifyListeners();
   }
 }

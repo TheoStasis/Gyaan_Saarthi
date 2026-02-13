@@ -30,7 +30,7 @@ class MessageBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withValues(alpha: 0.1),  // ✅ Fixed
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -41,7 +41,7 @@ class MessageBubble extends StatelessWidget {
           children: [
             // Message text
             Text(
-              message.displayText,
+              message.textContent,  // ✅ Fixed: was message.text
               style: TextStyle(
                 color: isUser ? Colors.white : Colors.black87,
                 fontSize: 16,
@@ -49,14 +49,14 @@ class MessageBubble extends StatelessWidget {
             ),
             
             // Images if any
-            if (message.images.isNotEmpty) ...[
+            if (message.images != null && message.images!.isNotEmpty) ...[  // ✅ Fixed: null check
               const SizedBox(height: 8),
-              ...message.images.map((img) => Padding(
+              ...message.images!.map((imageUrl) => Padding(  // ✅ Fixed: imageUrl is String
                 padding: const EdgeInsets.only(top: 4),
-                child: ClipRRectangle(
+                child: ClipRRect(  // ✅ Fixed: was ClipRRectangle
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    img.imageUrl,
+                    imageUrl,  // ✅ Fixed: imageUrl is already a String
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
@@ -68,9 +68,54 @@ class MessageBubble extends StatelessWidget {
                         ),
                       );
                     },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        height: 150,
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               )),
+            ],
+            
+            // Audio player if audio message
+            if (message.messageType == 'audio' && message.audioFile != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isUser ? Colors.white.withValues(alpha:0.2) : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.play_circle_outline,
+                      color: isUser ? Colors.white : Colors.black87,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      message.audioDuration != null
+                          ? '${message.audioDuration}s'
+                          : 'Audio',
+                      style: TextStyle(
+                        color: isUser ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
             
             // Timestamp
@@ -92,24 +137,5 @@ class MessageBubble extends StatelessWidget {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
-  }
-}
-
-class ClipRRectangle extends StatelessWidget {
-  final Widget child;
-  final BorderRadius borderRadius;
-  
-  const ClipRRectangle({
-    super.key,
-    required this.child,
-    required this.borderRadius,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: child,
-    );
   }
 }
