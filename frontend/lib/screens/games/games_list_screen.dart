@@ -96,8 +96,8 @@ class GamesListScreen extends StatelessWidget {
         contentPadding: const EdgeInsets.all(16),
         leading: CircleAvatar(
           radius: 30,
-          backgroundColor: color.withOpacity(0.2),
-          child: Icon(icon, color: color, size: 32),
+          backgroundColor: color,
+          child: Icon(icon, color: Colors.white, size: 32),
         ),
         title: Text(
           title,

@@ -5,7 +5,7 @@ import 'package:chewie/chewie.dart';
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
   final String title;
-  
+
   const VideoPlayerScreen({
     super.key,
     required this.videoUrl,
@@ -28,17 +28,18 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   Future<void> _initializePlayer() async {
-    _videoPlayerController = VideoPlayerController.network(widget.videoUrl);
-    
+    _videoPlayerController =
+        VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+
     await _videoPlayerController.initialize();
-    
+
     _chewieController = ChewieController(
       videoPlayerController: _videoPlayerController,
       autoPlay: true,
       looping: false,
       aspectRatio: _videoPlayerController.value.aspectRatio,
     );
-    
+
     setState(() {
       _isInitialized = true;
     });

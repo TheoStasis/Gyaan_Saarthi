@@ -52,6 +52,7 @@ class Message {
   final List<MessageImage> images;
   final DateTime createdAt;
 
+  // ignore: prefer_typing_uninitialized_variables, strict_top_level_inference
   var isSentByUser;
 
   Message({

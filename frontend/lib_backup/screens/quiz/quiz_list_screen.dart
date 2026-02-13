@@ -105,7 +105,7 @@ class _QuizListScreenState extends State<QuizListScreen> {
                 children: [
                   CircleAvatar(
                     radius: 25,
-                    backgroundColor: (quiz['color'] as Color).withOpacity(0.2),
+                    backgroundColor: (quiz['color'] as Color).withValues(alpha: 0.2),
                     child: Icon(
                       quiz['icon'] as IconData,
                       color: quiz['color'] as Color,

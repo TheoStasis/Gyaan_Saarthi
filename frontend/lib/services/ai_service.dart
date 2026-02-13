@@ -9,10 +9,12 @@ class AIService {
   final Dio _dio = Dio(
     BaseOptions(
       baseUrl: ApiConfig.baseUrl,
-      connectTimeout: ApiConfig.connectTimeout,
-      receiveTimeout: ApiConfig.receiveTimeout,
+      connectTimeout: Duration(seconds: 30),      // ✅ 30 seconds to connect
+      receiveTimeout: Duration(seconds: 180),     // ✅ 3 minutes to receive (AI is slow!)
+      sendTimeout: Duration(seconds: 30),         // ✅ 30 seconds to send
     ),
   );
+
 
   AIService() {
     // Add interceptor for debugging

@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -68,6 +70,7 @@ class _ChatScreenState extends State<ChatScreen> {
         });
 
         // Send audio message
+        // ignore: use_build_context_synchronously
         final chatProvider = Provider.of<ChatProvider>(context, listen: false);
         await chatProvider.sendAudioMessage(File(path));
 
@@ -80,7 +83,6 @@ class _ChatScreenState extends State<ChatScreen> {
         final path =
             '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
         await _audioRecorder.start(const RecordConfig(), path: path);
-
 
         setState(() {
           _isRecording = true;
@@ -97,6 +99,7 @@ class _ChatScreenState extends State<ChatScreen> {
       // Show dialog to add optional text
       String? text = await _showImageTextDialog();
 
+      // ignore: use_build_context_synchronously
       final chatProvider = Provider.of<ChatProvider>(context, listen: false);
       await chatProvider.sendImageMessage(File(image.path), message: text);
 
@@ -143,6 +146,16 @@ class _ChatScreenState extends State<ChatScreen> {
     return Consumer<ChatProvider>(
       builder: (context, chatProvider, child) {
         final messages = chatProvider.currentConversation?.messages ?? [];
+        
+        // ✅ DEBUG PRINT
+        if (kDebugMode) {
+          print('🟣 [CHAT_SCREEN] Building UI with ${messages.length} messages');
+        }
+        if (messages.isNotEmpty) {
+          if (kDebugMode) {
+            print('🟣 [CHAT_SCREEN] Last message: ${messages.last.textContent.substring(0, min(50, messages.last.textContent.length))}...');
+          }
+        }
 
         return Column(
           children: [
@@ -153,11 +166,18 @@ class _ChatScreenState extends State<ChatScreen> {
                   : messages.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
+                          key: ValueKey(messages.length),  // ✅ KEY FOR LISTVIEW
                           controller: _scrollController,
                           padding: const EdgeInsets.all(16),
                           itemCount: messages.length,
                           itemBuilder: (context, index) {
-                            return MessageBubble(message: messages[index]);
+                            if (kDebugMode) {
+                              print('🟣 [CHAT_SCREEN] Building message #$index');
+                            }
+                            return MessageBubble(
+                              key: ValueKey(messages[index].id),  // ✅ KEY FOR EACH MESSAGE
+                              message: messages[index],
+                            );
                           },
                         ),
             ),
@@ -169,7 +189,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: Theme.of(context).cardColor,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black,
                     blurRadius: 4,
                     offset: const Offset(0, -2),
                   ),

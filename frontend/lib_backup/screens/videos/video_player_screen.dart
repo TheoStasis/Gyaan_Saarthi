@@ -28,7 +28,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   Future<void> _initializePlayer() async {
-    _videoPlayerController = VideoPlayerController.network(widget.videoUrl);
+    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
     
     await _videoPlayerController.initialize();
     
