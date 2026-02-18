@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class ThemeConfig {
   // ========================================
@@ -36,17 +35,14 @@ class ThemeConfig {
       foregroundColor: Colors.white,
       elevation: 0,
       centerTitle: true,
-      titleTextStyle: GoogleFonts.poppins(
+      titleTextStyle: const TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: Colors.white,
       ),
       iconTheme: const IconThemeData(color: Colors.white),
     ),
-    textTheme: GoogleFonts.poppinsTextTheme().apply(
-      bodyColor: Colors.black87,
-      displayColor: Colors.black87,
-    ),
+    fontFamily: 'sans-serif',
     cardTheme: CardThemeData(
       elevation: 2,
       color: Colors.white,
@@ -64,7 +60,7 @@ class ThemeConfig {
           borderRadius: BorderRadius.circular(8),
         ),
         elevation: 2,
-        textStyle: GoogleFonts.poppins(
+        textStyle: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
         ),
@@ -114,9 +110,8 @@ class ThemeConfig {
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       selectedItemColor: primaryColor,
       unselectedItemColor: Colors.grey[600],
-      selectedLabelStyle:
-          GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
+      selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: const TextStyle(fontSize: 12),
       showUnselectedLabels: true,
       type: BottomNavigationBarType.fixed,
     ),
@@ -145,16 +140,13 @@ class ThemeConfig {
       foregroundColor: Colors.white,
       elevation: 0,
       centerTitle: true,
-      titleTextStyle: GoogleFonts.poppins(
+      titleTextStyle: const TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: Colors.white,
       ),
     ),
-    textTheme: GoogleFonts.poppinsTextTheme().apply(
-      bodyColor: Colors.white,
-      displayColor: Colors.white,
-    ),
+    fontFamily: 'sans-serif',
     cardTheme: CardThemeData(
       color: const Color(0xFF1E1E1E),
       elevation: 2,

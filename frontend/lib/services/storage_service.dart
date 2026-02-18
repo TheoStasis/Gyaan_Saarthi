@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
@@ -287,10 +288,16 @@ class StorageService {
     final prefs = await _getPrefs();
     final keys = prefs.getKeys();
     
-    print('=== StorageService Debug ===');
-    for (final key in keys) {
-      print('$key: ${prefs.get(key)}');
+    if (kDebugMode) {
+      print('=== StorageService Debug ===');
     }
-    print('===========================');
+    for (final key in keys) {
+      if (kDebugMode) {
+        print('$key: ${prefs.get(key)}');
+      }
+    }
+    if (kDebugMode) {
+      print('===========================');
+    }
   }
 }

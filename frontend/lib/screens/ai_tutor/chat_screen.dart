@@ -74,6 +74,7 @@ class _ChatScreenState extends State<ChatScreen> {
           _isRecording = false;
         });
 
+        // ignore: use_build_context_synchronously
         final chatProvider = Provider.of<ChatProvider>(context, listen: false);
         await chatProvider.sendAudioMessage(File(path));
 
@@ -100,6 +101,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (image != null) {
       String? text = await _showImageTextDialog();
 
+      // ignore: use_build_context_synchronously
       final chatProvider = Provider.of<ChatProvider>(context, listen: false);
       await chatProvider.sendImageMessage(File(image.path), message: text);
 

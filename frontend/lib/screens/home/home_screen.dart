@@ -64,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: CircleAvatar(
                   backgroundColor: Colors.white,
                   child: Text(
-                    user?.name?.substring(0, 1).toUpperCase() ?? 'S',
+                    user?.fullName.substring(0, 1).toUpperCase() ?? 'S',
                     style: TextStyle(
                       color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.bold,

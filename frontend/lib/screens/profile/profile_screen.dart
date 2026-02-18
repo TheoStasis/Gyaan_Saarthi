@@ -26,7 +26,7 @@ class ProfileScreen extends StatelessWidget {
               radius: 60,
               backgroundColor: Theme.of(context).primaryColor,
               child: Text(
-                user?.name?.substring(0, 1).toUpperCase() ?? 'S',
+                (user?.toString().substring(0, 1).toUpperCase() ?? 'S'),
                 style: const TextStyle(
                   fontSize: 48,
                   color: Colors.white,
@@ -39,19 +39,14 @@ class ProfileScreen extends StatelessWidget {
 
             // User Info
             Text(
-              user?.name ?? 'Student',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              user?.fullName ?? 'Student',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
               user?.email ?? 'student@example.com',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+
             ),
 
             const SizedBox(height: 32),
@@ -61,7 +56,7 @@ class ProfileScreen extends StatelessWidget {
               context,
               icon: Icons.school,
               title: 'Class',
-              value: user?.classLevel?.toString() ?? 'Not set',
+              value: user?.className ?? 'Not set',
             ),
             const SizedBox(height: 12),
             _buildInfoCard(
@@ -123,13 +118,10 @@ class ProfileScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              color: Theme.of(context).primaryColor.withValues(alpha: .1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              icon,
-              color: Theme.of(context).primaryColor,
-            ),
+            child: Icon(icon, color: Theme.of(context).primaryColor),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -138,10 +130,7 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -176,11 +165,15 @@ class ProfileScreen extends StatelessWidget {
             onPressed: () async {
               Navigator.pop(context); // Close dialog
               
-              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              final authProvider = Provider.of<AuthProvider>(
+                context,
+                listen: false,
+              );              
               await authProvider.logout();
               
               // Navigate to login
               Navigator.pushAndRemoveUntil(
+                // ignore: use_build_context_synchronously
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (route) => false,

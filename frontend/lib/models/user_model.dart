@@ -11,6 +11,8 @@ class User {
   final TeacherProfile? teacherProfile;
   final DateTime createdAt;
 
+  Null get className => null;
+
   User({
     required this.id,
     required this.username,
