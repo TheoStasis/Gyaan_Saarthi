@@ -9,9 +9,9 @@ class AIService {
   final Dio _dio = Dio(
     BaseOptions(
       baseUrl: ApiConfig.baseUrl,
-      connectTimeout: Duration(seconds: 30),      // ✅ 30 seconds to connect
-      receiveTimeout: Duration(seconds: 180),     // ✅ 3 minutes to receive (AI is slow!)
-      sendTimeout: Duration(seconds: 30),         // ✅ 30 seconds to send
+      connectTimeout: const Duration(seconds: 30),      // ✅ 30 seconds to connect
+      receiveTimeout: const Duration(seconds: 180),     // ✅ 3 minutes to receive (AI is slow!)
+      sendTimeout: const Duration(seconds: 30),         // ✅ 30 seconds to send
     ),
   );
 

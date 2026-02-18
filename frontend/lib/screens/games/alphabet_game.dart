@@ -22,18 +22,18 @@ class _AlphabetGameState extends State<AlphabetGame> {
           ),
         ],
       ),
-      body: Center(
+      body: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.games, size: 100, color: Colors.blue),
-            const SizedBox(height: 20),
-            const Text(
+            Icon(Icons.games, size: 100, color: Colors.blue),
+            SizedBox(height: 20),
+            Text(
               'Game Coming Soon!',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
-            const Text('Match letters with pictures'),
+            SizedBox(height: 10),
+            Text('Match letters with pictures'),
           ],
         ),
       ),

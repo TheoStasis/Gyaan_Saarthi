@@ -174,8 +174,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
             // Loading indicator
             if (chatProvider.isSending)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
+              const Padding(
+                padding: EdgeInsets.all(8.0),
                 child: Row(
                   children: [
                     SizedBox(
@@ -192,7 +192,7 @@ class _ChatScreenState extends State<ChatScreen> {
             // Error message
             if (chatProvider.error != null)
               Container(
-                padding: EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
                 color: Colors.red.shade100,
                 child: Text(
                   chatProvider.error!,
