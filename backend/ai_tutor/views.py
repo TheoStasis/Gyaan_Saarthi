@@ -21,7 +21,7 @@ from .serializers import (
     FeedbackSerializer,
     AIAnalyticsSerializer
 )
-from .services import FreeAITutorService
+from .services import AITutorService
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -42,7 +42,7 @@ class ChatViewSet(viewsets.ViewSet):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ai_service = FreeAITutorService()
+        self.ai_service = AITutorService()
     
     def send_text(self, request):
         """Send text message to AI"""
@@ -90,11 +90,11 @@ class ChatViewSet(viewsets.ViewSet):
         
         # Get AI response
         ai_response = self.ai_service.generate_response(
-            question=message_text,
-            class_level=conversation.class_level or 5,
-            subject=subject,
-            language=language
-        )
+        question=message_text,
+        class_level=conversation.class_level or 5,
+        subject=subject or 'General',
+        language=language,
+    )
         
         # Create AI message
         ai_message = Message.objects.create(

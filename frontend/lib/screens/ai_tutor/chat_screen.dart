@@ -52,17 +52,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final message = _messageController.text.trim();
     debugPrint('📱 [CHAT_SCREEN] Sending: $message');
-    
+
     _messageController.clear();
 
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    
-    debugPrint('📱 [CHAT_SCREEN] Before: ${chatProvider.currentConversation?.messages.length ?? 0} messages');
-    
+
+    debugPrint(
+        '📱 [CHAT_SCREEN] Before: ${chatProvider.currentConversation?.messages.length ?? 0} messages');
+
     await chatProvider.sendTextMessage(message);
-    
-    debugPrint('📱 [CHAT_SCREEN] After: ${chatProvider.currentConversation?.messages.length ?? 0} messages');
-    
+
+    debugPrint(
+        '📱 [CHAT_SCREEN] After: ${chatProvider.currentConversation?.messages.length ?? 0} messages');
+
     _scrollToBottom();
   }
 
@@ -148,12 +150,35 @@ class _ChatScreenState extends State<ChatScreen> {
     return Consumer<ChatProvider>(
       builder: (context, chatProvider, child) {
         final messages = chatProvider.currentConversation?.messages ?? [];
-        
+
         // ✅ Debug print
         debugPrint('🟣 [CHAT_SCREEN] Building with ${messages.length} messages');
 
         return Column(
           children: [
+            // ✅ Offline Mode Indicator
+            if (chatProvider.isOfflineMode)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                color: Colors.orange.shade100,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.wifi_off, size: 16, color: Colors.orange.shade900),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Offline Mode - Limited Responses',
+                      style: TextStyle(
+                        color: Colors.orange.shade900,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // Messages list
             Expanded(
               child: chatProvider.isSending && messages.isEmpty
@@ -161,13 +186,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   : messages.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
-                          key: ValueKey('messages_${messages.length}'),  // ✅ ADD KEY
+                          key: ValueKey('messages_${messages.length}'), // ✅ ADD KEY
                           controller: _scrollController,
                           padding: const EdgeInsets.all(16),
                           itemCount: messages.length,
                           itemBuilder: (context, index) {
                             return MessageBubble(
-                              key: ValueKey(messages[index].id),  // ✅ ADD KEY
+                              key: ValueKey(messages[index].id), // ✅ ADD KEY
                               message: messages[index],
                             );
                           },

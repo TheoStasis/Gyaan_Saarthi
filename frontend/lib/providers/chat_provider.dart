@@ -5,17 +5,19 @@ import '../services/ai_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final AIService _aiService = AIService();
-  
+
   List<Conversation> _conversations = [];
   Conversation? _currentConversation;
   bool _isLoading = false;
   bool _isSending = false;  // ✅ Separate flag for sending
+  bool _isOfflineMode = false;  // ✅ Offline mode flag
   String? _error;
 
   List<Conversation> get conversations => _conversations;
   Conversation? get currentConversation => _currentConversation;
   bool get isLoading => _isLoading;
   bool get isSending => _isSending;  // ✅ Add getter
+  bool get isOfflineMode => _isOfflineMode;  // ✅ Offline mode getter
   String? get error => _error;
 
   Future<void> loadConversations() async {
@@ -37,7 +39,7 @@ class ChatProvider with ChangeNotifier {
 
   Future<void> sendTextMessage(String message) async {
     debugPrint('🟢 [PROVIDER] Starting sendTextMessage: $message');
-    
+
     _isSending = true;  // ✅ Use separate flag
     _error = null;
     notifyListeners();
@@ -64,7 +66,7 @@ class ChatProvider with ChangeNotifier {
       }
 
       debugPrint('🟢 [PROVIDER] Calling AIService...');
-      
+
       // Call backend
       final result = await _aiService.sendTextMessage(
         conversationId: _currentConversation?.id,
@@ -75,13 +77,17 @@ class ChatProvider with ChangeNotifier {
 
       if (result['success']) {
         final aiMessage = result['message'] as Message;
-        
+
+        // ✅ Check if response is from offline mode
+        _isOfflineMode = result['isOffline'] ?? false;
+
         debugPrint('🟢 [PROVIDER] AI message: ${aiMessage.textContent.substring(0, 50)}...');
+        debugPrint('🟢 [PROVIDER] Offline mode: $_isOfflineMode');
 
         if (_currentConversation == null) {
           // First message - create new conversation
           debugPrint('🟢 [PROVIDER] Creating NEW conversation');
-          
+
           _currentConversation = Conversation(
             id: result['conversationId'] ?? DateTime.now().toString(),
             title: message.length > 30 ? "${message.substring(0, 30)}..." : message,
@@ -96,19 +102,19 @@ class ChatProvider with ChangeNotifier {
         } else {
           // ✅ Add AI message using copyWith
           debugPrint('🟢 [PROVIDER] Adding AI message');
-          
+
           _currentConversation = _currentConversation!.copyWith(
             messages: [..._currentConversation!.messages, aiMessage],
             messageCount: _currentConversation!.messageCount + 1,
             updatedAt: DateTime.now(),
           );
         }
-        
+
         debugPrint('🟢 [PROVIDER] Total messages: ${_currentConversation!.messages.length}');
       } else {
         debugPrint('🔴 [PROVIDER] Error: ${result['error']}');
         _error = result['error'];
-        
+
         // ✅ Remove user message if failed using copyWith
         if (_currentConversation != null) {
           _currentConversation = _currentConversation!.copyWith(
@@ -127,7 +133,7 @@ class ChatProvider with ChangeNotifier {
 
     _isSending = false;
     notifyListeners();
-    
+
     debugPrint('🟢 [PROVIDER] COMPLETED. Messages: ${_currentConversation?.messages.length ?? 0}');
   }
 
@@ -144,7 +150,10 @@ class ChatProvider with ChangeNotifier {
 
       if (result['success']) {
         final aiMessage = result['message'] as Message;
-        
+
+        // ✅ Check if response is from offline mode
+        _isOfflineMode = result['isOffline'] ?? false;
+
         if (_currentConversation == null) {
           _currentConversation = Conversation(
             id: result['conversationId'],
@@ -188,7 +197,10 @@ class ChatProvider with ChangeNotifier {
 
       if (result['success']) {
         final aiMessage = result['message'] as Message;
-        
+
+        // ✅ Check if response is from offline mode
+        _isOfflineMode = result['isOffline'] ?? false;
+
         if (_currentConversation == null) {
           _currentConversation = Conversation(
             id: result['conversationId'],
@@ -220,6 +232,7 @@ class ChatProvider with ChangeNotifier {
 
   void startNewConversation() {
     _currentConversation = null;
+    _isOfflineMode = false;  // ✅ Reset offline mode on new conversation
     notifyListeners();
   }
 

@@ -1,12 +1,10 @@
 """
-FREE AI Tutor Service using Ollama (Local LLM)
-NO API COSTS - Runs completely free!
+AI Tutor Service using Groq API (FREE Cloud API)
+Works perfectly on Android phones!
 
 File Location: C:\gyaansaarthi\backend\ai_tutor\services.py
 """
 
-import requests
-import json
 import logging
 from typing import List, Dict, Optional
 from django.conf import settings
@@ -15,26 +13,41 @@ import os
 logger = logging.getLogger(__name__)
 
 
-class FreeAITutorService:
+class AITutorService:
     """
-    AI Tutor using FREE Ollama (Local LLM)
-    Replaces expensive Claude API with free alternative
+    AI Tutor using FREE Groq Cloud API
+    Perfect for government schools - works on all Android phones!
     """
     
     def __init__(self):
-        # Ollama runs locally on your machine or free cloud
-        self.ollama_url = getattr(settings, 'OLLAMA_URL', 'http://localhost:11434')
-        self.model = getattr(settings, 'OLLAMA_MODEL', 'llama3.2')  # Free model
-        
+        # Initialize Groq client
+        try:
+            from groq import Groq
+            
+            api_key = os.getenv('GROQ_API_KEY')
+            if not api_key:
+                raise ValueError("GROQ_API_KEY not found in environment variables")
+            
+            self.client = Groq(api_key=api_key)
+            self.model = os.getenv('GROQ_MODEL', 'llama-3.1-8b-instant')
+            self.use_groq = True
+            
+            logger.info(f"✅ Groq AI initialized with model: {self.model}")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize Groq: {e}")
+            self.use_groq = False
+            raise
+    
     def generate_system_prompt(
         self,
         class_level: int,
         subject: str,
         language: str = 'hindi'
     ) -> str:
-        """Generate context-aware system prompt in Hindi"""
+        """Generate context-aware system prompt"""
         
-        if language == 'hindi':
+        if language in ['hindi', 'hi']:
             if class_level <= 2:
                 prompt = f"""आप एक बहुत प्यारे और धैर्यवान शिक्षक हैं।
 
@@ -167,19 +180,27 @@ Please:
     def generate_response(
         self,
         question: str,
-        class_level: int,
-        subject: str,
+        class_level: int = 5,
+        subject: str = 'General',
         language: str = 'hindi',
         conversation_history: Optional[List[Dict]] = None,
         include_knowledge: bool = True
     ) -> Dict:
         """
-        Generate AI tutor response using FREE Ollama
+        Generate AI tutor response using FREE Groq API
+        Works perfectly on Android phones via cloud!
         
-        This completely replaces the expensive Claude API!
         Cost: ₹0 per month (FREE!)
+        Limits: 30 requests/min, 6000/day (more than enough!)
         """
         try:
+            if not self.use_groq:
+                return {
+                    'success': False,
+                    'error': 'Groq API not initialized',
+                    'response': self._get_fallback_response(language)
+                }
+            
             # Build context from knowledge base
             context = ""
             knowledge_items = []
@@ -199,59 +220,61 @@ Please:
                 class_level, subject, language
             )
             
-            # Build full prompt for Ollama
-            full_prompt = f"""{system_prompt}
-
-छात्र का प्रश्न: {question}
+            # Handle greetings
+            greetings = ['hi', 'hello', 'hey', 'नमस्ते', 'হাই', 'வணக்கம்', 'నమస్తే', 'नमस्कार']
+            if question.lower().strip() in greetings:
+                greeting_responses = {
+                    'hindi': 'नमस्ते! मैं आपका AI शिक्षक हूं। मैं आपकी पढ़ाई में मदद कर सकता हूं। कोई भी सवाल पूछें! 📚',
+                    'english': 'Hello! I am your AI tutor. I can help you with your studies. Ask me anything! 📚',
+                }
+                return {
+                    'success': True,
+                    'response': greeting_responses.get(language, greeting_responses['hindi']),
+                    'tokens_used': 0,
+                    'model': self.model,
+                    'has_knowledge': False
+                }
+            
+            # Build full prompt
+            if language in ['hindi', 'hi']:
+                user_message = f"""छात्र का प्रश्न: {question}
 {context}
 
 कृपया सरल हिंदी में उत्तर दें:"""
+            else:
+                user_message = f"""Student's question: {question}
+{context}
+
+Please answer in simple {language}:"""
             
-            # Call FREE Ollama API
-            logger.info(f"Calling Ollama at {self.ollama_url} with model {self.model}")
+            # Call Groq API
+            logger.info(f"🌐 Calling Groq API with model {self.model}")
             
-            response = requests.post(
-                f"{self.ollama_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": full_prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.7,
-                        "top_p": 0.9,
-                        "num_predict": 200,  # Limit response length
-                    }
-                },
-                timeout=300
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.7,
+                max_tokens=500,
+                top_p=0.9,
             )
             
-            if response.status_code == 200:
-                result = response.json()
-                answer = result.get('response', '').strip()
-                
-                logger.info(f"Ollama response generated successfully")
-                
-                return {
-                    'success': True,
-                    'response': answer,
-                    'tokens_used': 0,  # Free! No token costs
-                    'model': self.model,
-                    'has_knowledge': bool(knowledge_items)
-                }
-            else:
-                logger.error(f"Ollama error: {response.status_code} - {response.text}")
-                raise Exception(f"Ollama API error: {response.text}")
-                
-        except requests.exceptions.ConnectionError:
-            logger.error("Cannot connect to Ollama. Is it running?")
+            answer = response.choices[0].message.content.strip()
+            
+            logger.info(f"✅ Groq response generated successfully")
+            
             return {
-                'success': False,
-                'error': 'Ollama is not running. Please start Ollama first.',
-                'response': self._get_fallback_response(language)
+                'success': True,
+                'response': answer,
+                'tokens_used': 0,  # Groq is FREE!
+                'model': self.model,
+                'has_knowledge': bool(knowledge_items)
             }
-        
+                
         except Exception as e:
-            logger.error(f"Error generating AI response: {str(e)}")
+            logger.error(f"❌ Error generating AI response: {str(e)}")
             return {
                 'success': False,
                 'error': str(e),
@@ -261,180 +284,18 @@ Please:
     def _get_fallback_response(self, language: str) -> str:
         """Fallback response if AI fails"""
         responses = {
-            'hindi': "क्षमा करें, मैं अभी आपकी मदद नहीं कर पा रहा हूं। कृपया थोड़ी देर बाद फिर से कोशिश करें। सुनिश्चित करें कि Ollama चल रहा है।",
-            'english': "Sorry, I cannot help you right now. Please try again later. Make sure Ollama is running."
+            'hindi': "क्षमा करें, मैं अभी आपकी मदद नहीं कर पा रहा हूं। कृपया थोड़ी देर बाद फिर से कोशिश करें।",
+            'english': "Sorry, I cannot help you right now. Please try again later."
         }
         return responses.get(language, responses['hindi'])
-    
-    def analyze_image_with_question(
-        self,
-        image_path: str,
-        question: str,
-        class_level: int,
-        subject: str,
-        language: str = 'hindi'
-    ) -> Dict:
-        """
-        Analyze image with FREE Ollama + LLaVA (vision model)
-        
-        Note: This requires Ollama's LLaVA model for image support
-        Install: ollama pull llava
-        """
-        try:
-            import base64
-            
-            # Read and encode image
-            with open(image_path, 'rb') as f:
-                image_data = base64.b64encode(f.read()).decode('utf-8')
-            
-            # Use LLaVA model for vision (FREE)
-            vision_model = getattr(settings, 'OLLAMA_VISION_MODEL', 'llava')
-            
-            system_prompt = self.generate_system_prompt(
-                class_level, subject, language
-            )
-            
-            if language == 'hindi':
-                prompt = f"""{system_prompt}
-
-छात्र ने यह चित्र भेजा है।
-
-प्रश्न: {question if question else "इस चित्र को देखकर समझाएं"}
-
-कृपया:
-1. चित्र में क्या दिख रहा है, बताएं
-2. अगर यह कोई गणित की समस्या है, तो हल करें
-3. अगर यह आरेख है, तो समझाएं
-4. सरल भाषा में जवाब दें"""
-            else:
-                prompt = f"""{system_prompt}
-
-Student sent this image.
-
-Question: {question if question else "Explain what you see in this image"}
-
-Please:
-1. Describe what's in the image
-2. If it's a math problem, solve it
-3. If it's a diagram, explain it
-4. Answer in simple language"""
-            
-            # Call Ollama with image
-            logger.info(f"Analyzing image with {vision_model}")
-            
-            response = requests.post(
-                f"{self.ollama_url}/api/generate",
-                json={
-                    "model": vision_model,
-                    "prompt": prompt,
-                    "images": [image_data],
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.7,
-                    }
-                },
-                timeout=90
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                answer = result.get('response', '').strip()
-                
-                return {
-                    'success': True,
-                    'response': answer,
-                    'tokens_used': 0,
-                    'extracted_text': None
-                }
-            else:
-                raise Exception(f"Vision model error: {response.text}")
-                
-        except requests.exceptions.ConnectionError:
-            logger.error("Cannot connect to Ollama vision model")
-            return {
-                'success': False,
-                'error': 'Vision model not available. Install with: ollama pull llava',
-                'response': "क्षमा करें, चित्र विश्लेषण उपलब्ध नहीं है। कृपया पहले 'ollama pull llava' चलाएं।"
-            }
-        
-        except Exception as e:
-            logger.error(f"Image analysis error: {str(e)}")
-            return {
-                'success': False,
-                'error': str(e),
-                'response': "क्षमा करें, चित्र को पढ़ने में समस्या हो रही है।"
-            }
 
 
-# FREE Speech Services
+# FREE Speech Services (Keep as is for future use)
 
 class FreeSpeechService:
     """
     FREE speech-to-text and text-to-speech using open source
-    No Google Cloud API costs!
     """
-    
-    @staticmethod
-    def transcribe_audio_vosk(
-        audio_file_path: str,
-        language: str = 'hi'
-    ) -> Dict:
-        """
-        FREE Speech-to-Text using Vosk (Offline)
-        No API costs!
-        
-        Download models from: https://alphacephei.com/vosk/models
-        Hindi model: vosk-model-small-hi-0.22
-        """
-        try:
-            from vosk import Model, KaldiRecognizer
-            import wave
-            
-            # Model path (download and place here)
-            model_path = getattr(
-                settings,
-                'VOSK_MODEL_PATH',
-                f"/path/to/vosk-model-small-{language}-0.22"
-            )
-            
-            if not os.path.exists(model_path):
-                return {
-                    'success': False,
-                    'error': f'Vosk model not found at {model_path}. Download from https://alphacephei.com/vosk/models'
-                }
-            
-            model = Model(model_path)
-            
-            # Open audio file
-            wf = wave.open(audio_file_path, "rb")
-            rec = KaldiRecognizer(model, wf.getframerate())
-            
-            result = ""
-            while True:
-                data = wf.readframes(4000)
-                if len(data) == 0:
-                    break
-                if rec.AcceptWaveform(data):
-                    result_dict = json.loads(rec.Result())
-                    result += result_dict.get('text', '') + " "
-            
-            # Final result
-            final_result = json.loads(rec.FinalResult())
-            result += final_result.get('text', '')
-            
-            return {
-                'success': True,
-                'transcript': result.strip(),
-                'confidence': 0.9
-            }
-            
-        except Exception as e:
-            logger.error(f"Vosk transcription error: {str(e)}")
-            return {
-                'success': False,
-                'error': str(e),
-                'transcript': ''
-            }
     
     @staticmethod
     def text_to_speech_gtts(
@@ -443,17 +304,14 @@ class FreeSpeechService:
         output_path: str = None
     ) -> Dict:
         """
-        FREE Text-to-Speech using gTTS (Google TTS - Free tier)
-        No API key needed!
+        FREE Text-to-Speech using gTTS
         """
         try:
             from gtts import gTTS
             import uuid
             
-            # Create TTS
             tts = gTTS(text=text, lang=language, slow=False)
             
-            # Save audio
             if not output_path:
                 output_path = f"/tmp/tts_{uuid.uuid4()}.mp3"
             
@@ -474,4 +332,4 @@ class FreeSpeechService:
 
 
 # Export the main service class
-__all__ = ['FreeAITutorService', 'FreeSpeechService']
+__all__ = ['AITutorService', 'FreeSpeechService']
