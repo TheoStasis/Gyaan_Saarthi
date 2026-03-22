@@ -20,7 +20,7 @@ class AITutorService:
     """
     
     def __init__(self):
-        # Initialize Groq client
+        # Initialize Groq clientpython manage.py runserver
         try:
             from groq import Groq
             
