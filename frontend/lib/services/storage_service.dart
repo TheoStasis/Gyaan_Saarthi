@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class StorageService {
   static SharedPreferences? _prefs;
@@ -82,15 +83,19 @@ class StorageService {
   }
 
   /// Save complete user data as JSON string
-  static Future<void> saveUserData(String jsonString) async {
+  static Future<void> saveUserData(Map<String, dynamic> userData) async {
     final prefs = await _getPrefs();
-    await prefs.setString(_userDataKey, jsonString);
+    await prefs.setString(_userDataKey, jsonEncode(userData));
   }
 
   /// Get complete user data
-  static Future<String?> getUserData() async {
+  static Future<Map<String, dynamic>?> getUserData() async {
     final prefs = await _getPrefs();
-    return prefs.getString(_userDataKey);
+    final jsonString = prefs.getString(_userDataKey);
+    if (jsonString != null && jsonString.isNotEmpty) {
+      return jsonDecode(jsonString) as Map<String, dynamic>;
+    }
+    return null;
   }
 
   /// Clear user data

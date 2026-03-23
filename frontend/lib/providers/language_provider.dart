@@ -2,122 +2,240 @@ import 'package:flutter/material.dart';
 import '../services/storage_service.dart';
 
 class LanguageProvider with ChangeNotifier {
-  String _currentLanguage = 'hi'; // Default: Hindi
+  String _currentLanguage = 'hi'; // Default Hindi
 
   String get currentLanguage => _currentLanguage;
+  
+  // ✅ ADDED: Get current language name
+  String get currentLanguageName {
+    const names = {
+      'en': 'English',
+      'hi': 'हिंदी',
+      'bn': 'বাংলা',
+      'ta': 'தமிழ்',
+      'te': 'తెలుగు',
+      'mr': 'मराठी',
+    };
+    return names[_currentLanguage] ?? 'English';
+  }
 
-  Map<String, String> get languages => {
-    'hi': 'हिंदी',
-    'en': 'English',
-    'bn': 'বাংলা',
-    'ta': 'தமிழ்',
-    'te': 'తెలుగు',
-    'mr': 'मराठी',
+  // All translations
+  final Map<String, Map<String, String>> _translations = {
+    'en': {
+      'home': 'Home',
+      'ai_tutor': 'AI Tutor',
+      'games': 'Games',
+      'quizzes': 'Quizzes',
+      'videos': 'Videos',
+      'profile': 'Profile',
+      'logout': 'Logout',
+      'greeting': 'Hello',
+      'welcome_message': 'Welcome to Gyaan Saarthi! Start your learning journey today.',
+      'features': 'Features',
+      'ai_tutor_desc': 'Ask questions, get instant answers',
+      'games_desc': 'Play and learn with fun games',
+      'quizzes_desc': 'Test your knowledge',
+      'videos_desc': 'Watch educational videos',
+      'quick_stats': 'Quick Stats',
+      'completed': 'Completed',
+      'progress': 'Progress',
+      'type_message': 'Type your question...',
+      'send': 'Send',
+      'loading': 'Loading...',
+      'error': 'Error',
+      'retry': 'Retry',
+      'coming_soon': 'Coming Soon',
+      'feature_development': 'This feature is under development. Stay tuned!',
+      'no_games': 'No games available yet',
+      'no_quizzes': 'No quizzes available yet',
+      'no_videos': 'No videos available yet',
+      'logout_confirm': 'Are you sure you want to logout?',
+      'cancel': 'Cancel',
+      'yes': 'Yes',
+      'no': 'No',
+    },
+    'hi': {
+      'home': 'होम',
+      'ai_tutor': 'AI शिक्षक',
+      'games': 'खेल',
+      'quizzes': 'प्रश्नोत्तरी',
+      'videos': 'वीडियो',
+      'profile': 'प्रोफ़ाइल',
+      'logout': 'लॉगआउट',
+      'greeting': 'नमस्ते',
+      'welcome_message': 'ज्ञान साथी में आपका स्वागत है! आज ही अपनी सीखने की यात्रा शुरू करें।',
+      'features': 'सुविधाएँ',
+      'ai_tutor_desc': 'प्रश्न पूछें, तुरंत उत्तर पाएं',
+      'games_desc': 'मज़ेदार खेलों के साथ सीखें',
+      'quizzes_desc': 'अपने ज्ञान की परीक्षा लें',
+      'videos_desc': 'शैक्षिक वीडियो देखें',
+      'quick_stats': 'त्वरित आँकड़े',
+      'completed': 'पूर्ण',
+      'progress': 'प्रगति',
+      'type_message': 'अपना सवाल लिखें...',
+      'send': 'भेजें',
+      'loading': 'लोड हो रहा है...',
+      'error': 'त्रुटि',
+      'retry': 'पुनः प्रयास करें',
+      'coming_soon': 'जल्द आ रहा है',
+      'feature_development': 'यह सुविधा विकास में है। बने रहें!',
+      'no_games': 'अभी कोई खेल उपलब्ध नहीं है',
+      'no_quizzes': 'अभी कोई प्रश्नोत्तरी उपलब्ध नहीं है',
+      'no_videos': 'अभी कोई वीडियो उपलब्ध नहीं है',
+      'logout_confirm': 'क्या आप वाकई लॉगआउट करना चाहते हैं?',
+      'cancel': 'रद्द करें',
+      'yes': 'हाँ',
+      'no': 'नहीं',
+    },
+    'bn': {
+      'home': 'হোম',
+      'ai_tutor': 'AI শিক্ষক',
+      'games': 'গেমস',
+      'quizzes': 'কুইজ',
+      'videos': 'ভিডিও',
+      'profile': 'প্রোফাইল',
+      'logout': 'লগআউট',
+      'greeting': 'হ্যালো',
+      'welcome_message': 'জ্ঞান সাথীতে স্বাগতম! আজই আপনার শেখার যাত্রা শুরু করুন।',
+      'features': 'বৈশিষ্ট্য',
+      'ai_tutor_desc': 'প্রশ্ন জিজ্ঞাসা করুন, তাৎক্ষণিক উত্তর পান',
+      'games_desc': 'মজাদার গেমস দিয়ে শিখুন',
+      'quizzes_desc': 'আপনার জ্ঞান পরীক্ষা করুন',
+      'videos_desc': 'শিক্ষামূলক ভিডিও দেখুন',
+      'quick_stats': 'দ্রুত পরিসংখ্যান',
+      'completed': 'সম্পন্ন',
+      'progress': 'অগ্রগতি',
+      'type_message': 'আপনার প্রশ্ন লিখুন...',
+      'send': 'পাঠান',
+      'loading': 'লোড হচ্ছে...',
+      'error': 'ত্রুটি',
+      'retry': 'পুনরায় চেষ্টা করুন',
+      'coming_soon': 'শীঘ্রই আসছে',
+      'feature_development': 'এই বৈশিষ্ট্যটি উন্নয়নাধীন। অপেক্ষা করুন!',
+      'no_games': 'এখনও কোনও গেম উপলব্ধ নেই',
+      'no_quizzes': 'এখনও কোনও কুইজ উপলব্ধ নেই',
+      'no_videos': 'এখনও কোনও ভিডিও উপলব্ধ নেই',
+      'logout_confirm': 'আপনি কি নিশ্চিত লগআউট করতে চান?',
+      'cancel': 'বাতিল',
+      'yes': 'হ্যাঁ',
+      'no': 'না',
+    },
+    'ta': {
+      'home': 'முகப்பு',
+      'ai_tutor': 'AI ஆசிரியர்',
+      'games': 'விளையாட்டுகள்',
+      'quizzes': 'வினாடி வினா',
+      'videos': 'வீடியோக்கள்',
+      'profile': 'சுயவிவரம்',
+      'logout': 'வெளியேறு',
+      'greeting': 'வணக்கம்',
+      'welcome_message': 'ஞான சாத்திக்கு வரவேற்கிறோம்! இன்றே உங்கள் கற்றல் பயணத்தைத் தொடங்குங்கள்।',
+      'features': 'அம்சங்கள்',
+      'ai_tutor_desc': 'கேள்விகள் கேளுங்கள், உடனடி பதில்கள் பெறுங்கள்',
+      'games_desc': 'வேடிக்கையான விளையாட்டுகளுடன் கற்றுக்கொள்ளுங்கள்',
+      'quizzes_desc': 'உங்கள் அறிவை சோதிக்கவும்',
+      'videos_desc': 'கல்வி வீடியோக்களைப் பார்க்கவும்',
+      'quick_stats': 'விரைவு புள்ளிவிவரங்கள்',
+      'completed': 'முடிந்தது',
+      'progress': 'முன்னேற்றம்',
+      'type_message': 'உங்கள் கேள்வியை எழுதுங்கள்...',
+      'send': 'அனுப்பு',
+      'loading': 'ஏற்றுகிறது...',
+      'error': 'பிழை',
+      'retry': 'மீண்டும் முயற்சிக்கவும்',
+      'coming_soon': 'விரைவில் வருகிறது',
+      'feature_development': 'இந்த அம்சம் மேம்பாட்டில் உள்ளது। தொடர்ந்து இருங்கள்!',
+      'no_games': 'இன்னும் விளையாட்டுகள் எதுவும் இல்லை',
+      'no_quizzes': 'இன்னும் வினாடி வினாக்கள் எதுவும் இல்லை',
+      'no_videos': 'இன்னும் வீடியோக்கள் எதுவும் இல்லை',
+      'logout_confirm': 'நீங்கள் நிச்சயமாக வெளியேற விரும்புகிறீர்களா?',
+      'cancel': 'ரத்துசெய்',
+      'yes': 'ஆம்',
+      'no': 'இல்லை',
+    },
+    'te': {
+      'home': 'హోమ్',
+      'ai_tutor': 'AI ట్యూటర్',
+      'games': 'గేమ్స్',
+      'quizzes': 'క్విజ్‌లు',
+      'videos': 'వీడియోలు',
+      'profile': 'ప్రొఫైల్',
+      'logout': 'లాగ్అవుట్',
+      'greeting': 'నమస్తే',
+      'welcome_message': 'జ్ఞాన సారథికి స్వాగతం! ఈ రోజే మీ అభ్యాస ప్రయాణాన్ని ప్రారంభించండి।',
+      'features': 'ఫీచర్లు',
+      'ai_tutor_desc': 'ప్రశ్నలు అడగండి, తక్షణ సమాధానాలు పొందండి',
+      'games_desc': 'ఆనందకరమైన గేమ్‌లతో నేర్చుకోండి',
+      'quizzes_desc': 'మీ జ్ఞానాన్ని పరీక్షించుకోండి',
+      'videos_desc': 'విద్యా వీడియోలను చూడండి',
+      'quick_stats': 'త్వరిత గణాంకాలు',
+      'completed': 'పూర్తయింది',
+      'progress': 'పురోగతి',
+      'type_message': 'మీ ప్రశ్నను టైప్ చేయండి...',
+      'send': 'పంపు',
+      'loading': 'లోడ్ అవుతోంది...',
+      'error': 'లోపం',
+      'retry': 'మళ్లీ ప్రయత్నించండి',
+      'coming_soon': 'త్వరలో వస్తోంది',
+      'feature_development': 'ఈ ఫీచర్ అభివృద్ధిలో ఉంది। వేచి ఉండండి!',
+      'no_games': 'ఇంకా గేమ్‌లు అందుబాటులో లేవు',
+      'no_quizzes': 'ఇంకా క్విజ్‌లు అందుబాటులో లేవు',
+      'no_videos': 'ఇంకా వీడియోలు అందుబాటులో లేవు',
+      'logout_confirm': 'మీరు ఖచ్చితంగా లాగ్అవుట్ చేయాలనుకుంటున్నారా?',
+      'cancel': 'రద్దు చేయి',
+      'yes': 'అవును',
+      'no': 'కాదు',
+    },
+    'mr': {
+      'home': 'होम',
+      'ai_tutor': 'AI शिक्षक',
+      'games': 'खेळ',
+      'quizzes': 'प्रश्नमंजुषा',
+      'videos': 'व्हिडिओ',
+      'profile': 'प्रोफाइल',
+      'logout': 'लॉगआउट',
+      'greeting': 'नमस्कार',
+      'welcome_message': 'ज्ञान साथीमध्ये आपले स्वागत आहे! आजच आपला शिकण्याचा प्रवास सुरू करा।',
+      'features': 'वैशिष्ट्ये',
+      'ai_tutor_desc': 'प्रश्न विचारा, त्वरित उत्तरे मिळवा',
+      'games_desc': 'मनोरंजक खेळांसह शिका',
+      'quizzes_desc': 'तुमच्या ज्ञानाची चाचणी घ्या',
+      'videos_desc': 'शैक्षणिक व्हिडिओ पहा',
+      'quick_stats': 'जलद आकडेवारी',
+      'completed': 'पूर्ण',
+      'progress': 'प्रगती',
+      'type_message': 'तुमचा प्रश्न टाइप करा...',
+      'send': 'पाठवा',
+      'loading': 'लोड होत आहे...',
+      'error': 'त्रुटी',
+      'retry': 'पुन्हा प्रयत्न करा',
+      'coming_soon': 'लवकरच येत आहे',
+      'feature_development': 'हे वैशिष्ट्य विकासाधीन आहे। संपर्कात रहा!',
+      'no_games': 'अद्याप कोणतेही खेळ उपलब्ध नाहीत',
+      'no_quizzes': 'अद्याप कोणतीही प्रश्नमंजुषा उपलब्ध नाही',
+      'no_videos': 'अद्याप कोणतेही व्हिडिओ उपलब्ध नाहीत',
+      'logout_confirm': 'तुम्हाला नक्की लॉगआउट करायचे आहे का?',
+      'cancel': 'रद्द करा',
+      'yes': 'होय',
+      'no': 'नाही',
+    },
   };
 
-  String get currentLanguageName => languages[_currentLanguage] ?? 'हिंदी';
+  String translate(String key) {
+    return _translations[_currentLanguage]?[key] ?? key;
+  }
 
   Future<void> loadLanguage() async {
-    final saved = await StorageService.getLanguage();
-    if (saved != null && languages.containsKey(saved)) {
-      _currentLanguage = saved;
+    final savedLanguage = await StorageService.getLanguage();
+    if (savedLanguage != null) {
+      _currentLanguage = savedLanguage;
       notifyListeners();
     }
   }
 
   Future<void> changeLanguage(String languageCode) async {
-    if (languages.containsKey(languageCode)) {
-      _currentLanguage = languageCode;
-      await StorageService.saveLanguage(languageCode);
-      notifyListeners();
-    }
-  }
-
-  // Translations
-  Map<String, Map<String, String>> get translations => {
-    'home': {
-      'hi': 'होम',
-      'en': 'Home',
-      'bn': 'হোম',
-      'ta': 'முகப்பு',
-      'te': 'హోమ్',
-      'mr': 'होम',
-    },
-    'ai_tutor': {
-      'hi': 'AI शिक्षक',
-      'en': 'AI Tutor',
-      'bn': 'AI শিক্ষক',
-      'ta': 'AI ஆசிரியர்',
-      'te': 'AI ట్యూటర్',
-      'mr': 'AI शिक्षक',
-    },
-    'quizzes': {
-      'hi': 'क्विज़',
-      'en': 'Quizzes',
-      'bn': 'কুইজ',
-      'ta': 'வினாடி வினா',
-      'te': 'క్విజ్‌లు',
-      'mr': 'क्विझ',
-    },
-    'games': {
-      'hi': 'खेल',
-      'en': 'Games',
-      'bn': 'গেম',
-      'ta': 'விளையாட்டுகள்',
-      'te': 'ఆటలు',
-      'mr': 'खेळ',
-    },
-    'videos': {
-      'hi': 'वीडियो',
-      'en': 'Videos',
-      'bn': 'ভিডিও',
-      'ta': 'வீடியோக்கள்',
-      'te': 'వీడియోలు',
-      'mr': 'व्हिडिओ',
-    },
-    'progress': {
-      'hi': 'प्रगति',
-      'en': 'Progress',
-      'bn': 'অগ্রগতি',
-      'ta': 'முன்னேற்றம்',
-      'te': 'పురోగతి',
-      'mr': 'प्रगती',
-    },
-    'profile': {
-      'hi': 'प्रोफाइल',
-      'en': 'Profile',
-      'bn': 'প্রোফাইল',
-      'ta': 'சுயவிவரம்',
-      'te': 'ప్రొఫైల్',
-      'mr': 'प्रोफाइल',
-    },
-    'logout': {
-      'hi': 'लॉगआउट',
-      'en': 'Logout',
-      'bn': 'প্রস্থান',
-      'ta': 'வெளியேறு',
-      'te': 'లాగ్అవుట్',
-      'mr': 'बाहेर पडा',
-    },
-    'greeting': {
-      'hi': 'नमस्ते',
-      'en': 'Hello',
-      'bn': 'নমস্কার',
-      'ta': 'வணக்கம்',
-      'te': 'నమస్కారం',
-      'mr': 'नमस्कार',
-    },
-    'welcome_message': {
-      'hi': 'सीखने के लिए तैयार हैं?',
-      'en': 'Ready to Learn?',
-      'bn': 'শিখতে প্রস্তুত?',
-      'ta': 'கற்க தயாரா?',
-      'te': 'నేర్చుకోవడానికి సిద్ధంగా ఉన్నారా?',
-      'mr': 'शिकायला तयार आहात?',
-    },
-  };
-
-  String translate(String key) {
-    return translations[key]?[_currentLanguage] ?? key;
+    _currentLanguage = languageCode;
+    await StorageService.saveLanguage(languageCode);
+    notifyListeners();
   }
 }
