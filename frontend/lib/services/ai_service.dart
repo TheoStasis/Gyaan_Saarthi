@@ -1,200 +1,207 @@
-import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import '../config/api_config.dart';
-import '../models/conversation_model.dart';
 import 'storage_service.dart';
-import 'offline_responses.dart';
 
 class AIService {
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: ApiConfig.baseUrl,
-      connectTimeout: const Duration(seconds: 30),      // ✅ 30 seconds to connect
-      receiveTimeout: const Duration(seconds: 180),     // ✅ 3 minutes to receive (AI is slow!)
-      sendTimeout: const Duration(seconds: 30),         // ✅ 30 seconds to send
-    ),
-  );
+  late final Dio _dio;
 
   AIService() {
-    // Add interceptor for debugging
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          debugPrint('🔵 REQUEST: ${options.method} ${options.path}');
-          debugPrint('🔵 HEADERS: ${options.headers}');
-          debugPrint('🔵 DATA: ${options.data}');
-          return handler.next(options);
-        },
-        onResponse: (response, handler) {
-          debugPrint('🟢 RESPONSE: ${response.statusCode}');
-          debugPrint('🟢 DATA: ${response.data}');
-          return handler.next(response);
-        },
-        onError: (error, handler) {
-          debugPrint('🔴 ERROR: ${error.response?.statusCode}');
-          debugPrint('🔴 ERROR DATA: ${error.response?.data}');
-          debugPrint('🔴 ERROR MESSAGE: ${error.message}');
-          return handler.next(error);
-        },
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: ApiConfig.baseUrl,
+        connectTimeout: ApiConfig.connectTimeout,
+        receiveTimeout: ApiConfig.receiveTimeout,
+        sendTimeout: ApiConfig.sendTimeout,
       ),
     );
   }
 
-  /// Check internet connectivity
-  Future<bool> isOnline() async {
+  // ✅ NEW: Refresh the access token using the refresh token
+  Future<String?> _refreshAccessToken() async {
     try {
-      final result = await Connectivity().checkConnectivity();
-      return result != ConnectivityResult.none;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<String?> _getToken() async {
-    final token = await StorageService.getAccessToken();
-    debugPrint('🔑 TOKEN: ${token ?? "NULL"}');
-    return token;
-  }
-
-  Future<List<Conversation>> getConversations() async {
-    try {
-      final token = await _getToken();
-
-      if (token == null || token.isEmpty) {
-        throw Exception('No authentication token found');
+      final refreshToken = await StorageService.getRefreshToken();
+      if (refreshToken == null || refreshToken.isEmpty) {
+        debugPrint('🔴 [AI_SERVICE] No refresh token found!');
+        return null;
       }
 
-      final response = await _dio.get(
-        ApiConfig.conversations,
+      debugPrint('🔵 [AI_SERVICE] Attempting token refresh...');
+
+      final refreshDio = Dio(BaseOptions(baseUrl: ApiConfig.baseUrl));
+      final response = await refreshDio.post(
+        ApiConfig.refresh,
+        data: {'refresh': refreshToken},
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: {'Content-Type': 'application/json'},
+          validateStatus: (status) => status! < 500,
         ),
       );
 
-      final data = response.data;
-      if (data is Map && data.containsKey('results')) {
-        return (data['results'] as List)
-            .map((json) => Conversation.fromJson(json))
-            .toList();
-      } else if (data is List) {
-        return data.map((json) => Conversation.fromJson(json)).toList();
+      debugPrint('🔵 [AI_SERVICE] Refresh status: ${response.statusCode}');
+      debugPrint('🔵 [AI_SERVICE] Refresh response: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final newAccessToken = response.data['access'];
+        if (newAccessToken != null) {
+          await StorageService.saveAccessToken(newAccessToken);
+          debugPrint('🟢 [AI_SERVICE] Token refreshed successfully!');
+          return newAccessToken;
+        }
       }
 
-      return [];
+      debugPrint('🔴 [AI_SERVICE] Token refresh failed: ${response.data}');
+      return null;
     } catch (e) {
-      debugPrint('Error loading conversations: $e');
-      throw Exception('Failed to load conversations: $e');
+      debugPrint('🔴 [AI_SERVICE] Token refresh exception: $e');
+      return null;
     }
   }
 
   Future<Map<String, dynamic>> sendTextMessage({
+    required String question,
     String? conversationId,
-    required String message,
-    String? subject,
     String? language,
   }) async {
     try {
-      // Check connectivity first
-      final online = await isOnline();
+      // Map Flutter language codes to backend expected values
+      final languageMap = {
+        'en': 'english',
+        'hi': 'hindi',
+        'bn': 'bengali',
+        'ta': 'tamil',
+        'te': 'telugu',
+        'mr': 'marathi',
+      };
 
-      if (!online) {
-        // OFFLINE MODE - Use cached responses
-        debugPrint('⚠️ [AI_SERVICE] Offline mode - using cached responses');
+      final backendLanguage = languageMap[language] ?? 'english';
 
-        final offlineResponse = OfflineResponses.getResponse(
-          message,
-          language ?? 'hindi',
-        );
+      final requestData = {
+        'question': question.trim(),
+        'language': backendLanguage,
+      };
 
-        return {
-          'success': true,
-          'conversationId': 'offline_${DateTime.now().millisecondsSinceEpoch}',
-          'message': Message(
-            id: 'offline_${DateTime.now().millisecondsSinceEpoch}',
-            role: 'assistant',
-            messageType: 'text',
-            textContent: offlineResponse,
-            createdAt: DateTime.now(),
-          ),
-          'isOffline': true, // Flag to show offline indicator
-        };
+      if (conversationId != null && conversationId.isNotEmpty) {
+        requestData['conversation_id'] = conversationId;
       }
 
-      // ONLINE MODE - Use backend API (Groq)
-      final token = await _getToken();
+      debugPrint('🔵 [AI_SERVICE] ==========================================');
+      debugPrint('🔵 [AI_SERVICE] Sending request to: ${ApiConfig.baseUrl}${ApiConfig.chatText}');
+      debugPrint('🔵 [AI_SERVICE] Question: $question');
+      debugPrint('🔵 [AI_SERVICE] Language: $language → $backendLanguage');
+      debugPrint('🔵 [AI_SERVICE] ==========================================');
+
+      // ✅ Get token (may be expired)
+      String? token = await StorageService.getAccessToken();
 
       if (token == null || token.isEmpty) {
+        debugPrint('🔴 [AI_SERVICE] ERROR: No access token found!');
         return {
           'success': false,
-          'error': 'No authentication token found. Please login again.',
+          'error': 'Not authenticated. Please login again.',
         };
       }
 
-      debugPrint('🌐 [AI_SERVICE] Online mode - calling backend API');
+      debugPrint('🔵 [AI_SERVICE] Token exists: ${token.length} chars');
 
-      final response = await _dio.post(
+      // ✅ Make first attempt
+      var response = await _dio.post(
         ApiConfig.chatText,
-        data: {
-          if (conversationId != null) 'conversation_id': conversationId,
-          'message': message,
-          if (subject != null) 'subject': subject,
-          if (language != null) 'language': language,
-        },
+        data: requestData,
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
           },
+          sendTimeout: const Duration(minutes: 3),
+          receiveTimeout: const Duration(minutes: 5),
+          validateStatus: (status) => status! < 600,
         ),
       );
 
-      debugPrint('✅ [AI_SERVICE] Online response received');
+      debugPrint('🟢 [AI_SERVICE] Response status: ${response.statusCode}');
 
-      return {
-        'success': true,
-        'conversationId': response.data['conversation_id'],
-        'message': Message.fromJson(response.data['message']),
-        'isOffline': false,
-      };
+      // ✅ If 401, try refreshing the token and retry ONCE
+      if (response.statusCode == 401) {
+        debugPrint('🔴 [AI_SERVICE] Got 401 - trying token refresh...');
 
-    } on DioException catch (e) {
-      debugPrint('🔴 [AI_SERVICE] DioException: ${e.type}');
+        final newToken = await _refreshAccessToken();
 
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.connectionError) {
-        // Connection error - treat as offline
-        final offlineResponse = OfflineResponses.getResponse(
-          message,
-          language ?? 'hindi',
+        if (newToken == null) {
+          return {
+            'success': false,
+            'error': 'Session expired. Please login again.',
+          };
+        }
+
+        // ✅ Retry with new token
+        debugPrint('🔵 [AI_SERVICE] Retrying with new token...');
+        response = await _dio.post(
+          ApiConfig.chatText,
+          data: requestData,
+          options: Options(
+            headers: {
+              'Authorization': 'Bearer $newToken',
+              'Content-Type': 'application/json',
+            },
+            sendTimeout: const Duration(minutes: 3),
+            receiveTimeout: const Duration(minutes: 5),
+            validateStatus: (status) => status! < 600,
+          ),
         );
 
-        return {
-          'success': true,
-          'conversationId': 'offline_${DateTime.now().millisecondsSinceEpoch}',
-          'message': Message(
-            id: 'offline_${DateTime.now().millisecondsSinceEpoch}',
-            role: 'assistant',
-            messageType: 'text',
-            textContent: offlineResponse,
-            createdAt: DateTime.now(),
-          ),
-          'isOffline': true,
-        };
+        debugPrint('🟢 [AI_SERVICE] Retry response status: ${response.statusCode}');
       }
 
-      if (e.response?.statusCode == 401) {
+      debugPrint('🟢 [AI_SERVICE] Final response data: ${response.data}');
+      debugPrint('🔵 [AI_SERVICE] ==========================================');
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': response.data,
+        };
+      } else {
+        debugPrint('🔴 [AI_SERVICE] Backend error: ${response.data}');
         return {
           'success': false,
-          'error': 'Authentication failed. Please login again.',
+          'error': response.data['error'] ??
+              response.data['detail'] ??
+              response.data['message'] ??
+              'Server error (${response.statusCode})',
+          'data': response.data,
         };
+      }
+    } on DioException catch (e) {
+      debugPrint('🔴 [AI_SERVICE] DioException: ${e.type}');
+      debugPrint('🔴 [AI_SERVICE] Message: ${e.message}');
+
+      String errorMessage;
+
+      switch (e.type) {
+        case DioExceptionType.connectionTimeout:
+          errorMessage = 'Connection timeout. Check if backend is running.';
+          break;
+        case DioExceptionType.sendTimeout:
+          errorMessage = 'Send timeout - request took too long.';
+          break;
+        case DioExceptionType.receiveTimeout:
+          errorMessage = 'Response timeout - AI is taking too long.';
+          break;
+        case DioExceptionType.badResponse:
+          errorMessage = 'Server error: ${e.response?.statusCode}';
+          break;
+        case DioExceptionType.cancel:
+          errorMessage = 'Request cancelled.';
+          break;
+        default:
+          errorMessage = 'Network error: ${e.message}';
       }
 
       return {
         'success': false,
-        'error': e.response?.data['error'] ?? e.message ?? 'Failed to send message',
+        'error': errorMessage,
+        'data': e.response?.data,
       };
     } catch (e) {
       debugPrint('🔴 [AI_SERVICE] Unexpected error: $e');
@@ -205,118 +212,48 @@ class AIService {
     }
   }
 
-  Future<Map<String, dynamic>> sendAudioMessage({
-    String? conversationId,
-    required File audioFile,
-    String? subject,
-    String? language,
-  }) async {
+  Future<Map<String, dynamic>> getConversations() async {
     try {
-      final token = await _getToken();
+      String? token = await StorageService.getAccessToken();
 
-      if (token == null || token.isEmpty) {
-        return {
-          'success': false,
-          'error': 'No authentication token found. Please login again.',
-        };
-      }
-
-      FormData formData = FormData.fromMap({
-        if (conversationId != null) 'conversation_id': conversationId,
-        'audio_file': await MultipartFile.fromFile(audioFile.path),
-        if (subject != null) 'subject': subject,
-        if (language != null) 'language': language,
-        'return_audio': true,
-      });
-
-      final response = await _dio.post(
-        ApiConfig.chatAudio,
-        data: formData,
+      var response = await _dio.get(
+        ApiConfig.conversations,
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
+          validateStatus: (status) => status! < 600,
         ),
       );
 
-      return {
-        'success': true,
-        'conversationId': response.data['conversation_id'],
-        'message': Message.fromJson(response.data['message']),
-        'audioUrl': response.data['audio_url'],
-        'isOffline': false,
-      };
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
+      // ✅ Auto refresh on 401 for conversations too
+      if (response.statusCode == 401) {
+        final newToken = await _refreshAccessToken();
+        if (newToken != null) {
+          response = await _dio.get(
+            ApiConfig.conversations,
+            options: Options(
+              headers: {'Authorization': 'Bearer $newToken'},
+              validateStatus: (status) => status! < 600,
+            ),
+          );
+        }
+      }
+
+      if (response.statusCode == 200) {
         return {
-          'success': false,
-          'error': 'Authentication failed. Please login again.',
+          'success': true,
+          'data': response.data,
         };
       }
+
       return {
         'success': false,
-        'error': e.response?.data['error'] ?? e.message ?? 'Failed to send audio',
+        'error': 'Failed to load conversations',
       };
     } catch (e) {
+      debugPrint('🔴 [AI_SERVICE] Error getting conversations: $e');
       return {
         'success': false,
-        'error': 'Unexpected error: $e',
-      };
-    }
-  }
-
-  Future<Map<String, dynamic>> sendImageMessage({
-    String? conversationId,
-    required File imageFile,
-    String? message,
-    String? subject,
-    String? language,
-  }) async {
-    try {
-      final token = await _getToken();
-
-      if (token == null || token.isEmpty) {
-        return {
-          'success': false,
-          'error': 'No authentication token found. Please login again.',
-        };
-      }
-
-      FormData formData = FormData.fromMap({
-        if (conversationId != null) 'conversation_id': conversationId,
-        'image': await MultipartFile.fromFile(imageFile.path),
-        if (message != null) 'message': message,
-        if (subject != null) 'subject': subject,
-        if (language != null) 'language': language,
-      });
-
-      final response = await _dio.post(
-        ApiConfig.chatImage,
-        data: formData,
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-      );
-
-      return {
-        'success': true,
-        'conversationId': response.data['conversation_id'],
-        'message': Message.fromJson(response.data['message']),
-        'isOffline': false,
-      };
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        return {
-          'success': false,
-          'error': 'Authentication failed. Please login again.',
-        };
-      }
-      return {
-        'success': false,
-        'error': e.response?.data['error'] ?? e.message ?? 'Failed to send image',
-      };
-    } catch (e) {
-      return {
-        'success': false,
-        'error': 'Unexpected error: $e',
+        'error': e.toString(),
       };
     }
   }

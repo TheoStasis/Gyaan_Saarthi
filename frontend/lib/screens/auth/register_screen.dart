@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../home/home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,23 +13,25 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  final _emailController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _classController = TextEditingController();
+  final _schoolController = TextEditingController();
+  
   String _selectedRole = 'student';
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _usernameController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    _emailController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _classController.dispose();
+    _schoolController.dispose();
     super.dispose();
   }
 
@@ -36,30 +39,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    // Call register with named parameters (matching auth_provider.dart)
+    
     final success = await authProvider.register(
       username: _usernameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
       role: _selectedRole,
+      classLevel: _selectedRole == 'student' && _classController.text.isNotEmpty
+          ? int.tryParse(_classController.text)
+          : null,
+      schoolName: _schoolController.text.trim().isNotEmpty
+          ? _schoolController.text.trim()
+          : null,
     );
 
     if (success && mounted) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registration successful! Please login.'),
-          backgroundColor: Colors.green,
-        ),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.error ?? 'Registration failed'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
         ),
       );
     }
@@ -70,215 +76,246 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Register'),
+        centerTitle: true,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 40),
-                Icon(
-                  Icons.school,
-                  size: 80,
-                  color: Theme.of(context).primaryColor,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Create Account',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+        child: Consumer<AuthProvider>(
+          builder: (context, authProvider, child) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Create Account',
+                      style: TextStyle(
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
+                        color: Colors.blue,
                       ),
-                ),
-                Text(
-                  'Join Gyaan Saarthi',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _firstNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'First Name',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter first name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _lastNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Last Name',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter last name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Username',
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter username';
-                    }
-                    if (value.length < 3) {
-                      return 'Username must be at least 3 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter email';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                        .hasMatch(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedRole,
-                  decoration: const InputDecoration(
-                    labelText: 'Role',
-                    prefixIcon: Icon(Icons.work_outline),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'student',
-                      child: Text('Student'),
+                      textAlign: TextAlign.center,
                     ),
-                    DropdownMenuItem(
-                      value: 'teacher',
-                      child: Text('Teacher'),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Join Gyaan Saarthi',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
                     ),
-                    DropdownMenuItem(
-                      value: 'parent',
-                      child: Text('Parent'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedRole = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Username
+                    TextFormField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Username',
+                        prefixIcon: Icon(Icons.account_circle),
+                        border: OutlineInputBorder(),
+                        hintText: 'Choose a unique username',
                       ),
-                      onPressed: () {
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter username';
+                        }
+                        if (value.length < 3) {
+                          return 'Username must be at least 3 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // First Name
+                    TextFormField(
+                      controller: _firstNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'First Name',
+                        prefixIcon: Icon(Icons.person),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter first name';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Last Name
+                    TextFormField(
+                      controller: _lastNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Last Name',
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter last name';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Email
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Please enter valid email';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Password
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword 
+                              ? Icons.visibility 
+                              : Icons.visibility_off),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter password';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Role Selection
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedRole,
+                      decoration: const InputDecoration(
+                        labelText: 'I am a',
+                        prefixIcon: Icon(Icons.school),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'student', child: Text('Student')),
+                        DropdownMenuItem(value: 'teacher', child: Text('Teacher')),
+                      ],
+                      onChanged: (value) {
                         setState(() {
-                          _obscurePassword = !_obscurePassword;
+                          _selectedRole = value!;
                         });
                       },
                     ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirmPassword,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Class (only for students)
+                    if (_selectedRole == 'student')
+                      TextFormField(
+                        controller: _classController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Class',
+                          prefixIcon: Icon(Icons.class_),
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter class (1-12)',
+                        ),
+                        validator: (value) {
+                          if (_selectedRole == 'student') {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter class';
+                            }
+                            final classNum = int.tryParse(value);
+                            if (classNum == null || classNum < 1 || classNum > 12) {
+                              return 'Please enter class between 1-12';
+                            }
+                          }
+                          return null;
+                        },
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
+                    
+                    if (_selectedRole == 'student') const SizedBox(height: 16),
+                    
+                    // School Name (optional)
+                    TextFormField(
+                      controller: _schoolController,
+                      decoration: const InputDecoration(
+                        labelText: 'School Name (Optional)',
+                        prefixIcon: Icon(Icons.location_city),
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please confirm password';
-                    }
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                Consumer<AuthProvider>(
-                  builder: (context, auth, _) {
-                    return ElevatedButton(
-                      onPressed: auth.isLoading ? null : _register,
-                      child: auth.isLoading
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Register Button
+                    ElevatedButton(
+                      onPressed: authProvider.isLoading ? null : _register,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: authProvider.isLoading
                           ? const SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(
-                                  Colors.white,
-                                ),
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
-                          : const Text('Register'),
-                    );
-                  },
+                          : const Text('Register', style: TextStyle(fontSize: 16)),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Login Link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Already have an account? '),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Login'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Already have an account? Login'),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

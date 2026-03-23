@@ -46,9 +46,14 @@ app.*.map.json
 # Storage
 *.hive
 *.g.dart
+<<<<<<< HEAD
 # Local Mac/PC generated files
 ios/Flutter/flutter_export_environment.sh
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_lldbinit*
 ios/Flutter/ephemeral/
 ios/Runner/GeneratedPluginRegistrant.*
+=======
+__pycache__/
+*.pyc
+>>>>>>> 3611480d7abda630ab16c2351f5fc427a3df3a9e

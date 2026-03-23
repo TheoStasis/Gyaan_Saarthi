@@ -15,46 +15,38 @@ class _VideoListScreenState extends State<VideoListScreen> {
       'id': '1',
       'title': 'Plant Life Cycle',
       'subject': 'Science',
-      'class': 5,
-      'duration': '5:30',
-      'views': 1234,
+      'duration': '5:21',
       'thumbnail': 'https://via.placeholder.com/300x200?text=Plant+Life+Cycle',
-      'videoUrl': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      'videoUrl': 'https://www.youtube.com/watch?v=2SBVz4MgeIE',
     },
     {
       'id': '2',
       'title': 'Water Cycle Experiment',
       'subject': 'Science',
-      'class': 6,
-      'duration': '8:15',
-      'views': 2456,
+      'duration': '3:08',
       'thumbnail': 'https://via.placeholder.com/300x200?text=Water+Cycle',
-      'videoUrl': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      'videoUrl': 'https://www.youtube.com/watch?v=ncORPosDrjI',
     },
     {
       'id': '3',
       'title': 'Solar System Model',
       'subject': 'Science',
-      'class': 7,
-      'duration': '10:00',
-      'views': 3567,
+      'duration': '4:21',
       'thumbnail': 'https://via.placeholder.com/300x200?text=Solar+System',
-      'videoUrl': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      'videoUrl': 'https://www.youtube.com/watch?v=w36yxLgwUOc',
     },
     {
       'id': '4',
       'title': 'Chemical Reactions Demo',
       'subject': 'Science',
-      'class': 8,
-      'duration': '6:45',
-      'views': 1890,
+      'duration': '3:28',
       'thumbnail': 'https://via.placeholder.com/300x200?text=Chemical+Reactions',
-      'videoUrl': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+      'videoUrl': 'https://www.youtube.com/watch?v=NRCn8z8gb1w',
     },
   ];
 
   String _selectedClass = 'All';
-  final List<String> _classFilters = ['All', '5', '6', '7', '8', '9', '10', '11', '12'];
+  final List<String> _classFilters = ['All'];
 
   @override
   Widget build(BuildContext context) {

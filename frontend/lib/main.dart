@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
           langProvider.loadLanguage();
           
           return MaterialApp(
-            title: 'Gyaan Saarthi',
+            title: 'Gyaan Saarthi - ज्ञान साथी',
             debugShowCheckedModeBanner: false,
             theme: ThemeConfig.lightTheme,
             darkTheme: ThemeConfig.darkTheme,

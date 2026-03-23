@@ -1,335 +1,221 @@
-"""
-AI Tutor Service using Groq API (FREE Cloud API)
-Works perfectly on Android phones!
-
-File Location: C:\gyaansaarthi\backend\ai_tutor\services.py
-"""
-
 import logging
-from typing import List, Dict, Optional
-from django.conf import settings
 import os
+from typing import List, Dict, Optional
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 
 class AITutorService:
-    """
-    AI Tutor using FREE Groq Cloud API
-    Perfect for government schools - works on all Android phones!
-    """
-    
     def __init__(self):
-        # Initialize Groq clientpython manage.py runserver
+        # Initialize Groq client
         try:
             from groq import Groq
             
+            # Load API key from environment
             api_key = os.getenv('GROQ_API_KEY')
-            if not api_key:
-                raise ValueError("GROQ_API_KEY not found in environment variables")
+            
+            if not api_key or api_key == 'your-groq-api-key-here':
+                raise ValueError(
+                    "⚠️ GROQ_API_KEY not configured!\n"
+                    "Get your FREE key from: https://console.groq.com\n"
+                    "Then add it to backend/.env file"
+                )
             
             self.client = Groq(api_key=api_key)
             self.model = os.getenv('GROQ_MODEL', 'llama-3.1-8b-instant')
             self.use_groq = True
             
-            logger.info(f"✅ Groq AI initialized with model: {self.model}")
+            logger.info(f"✅ Groq AI initialized: {self.model}")
+            print(f"✅ Groq AI initialized with model: {self.model}")
             
-        except Exception as e:
-            logger.error(f"❌ Failed to initialize Groq: {e}")
-            self.use_groq = False
+        except ImportError:
+            logger.error("❌ Groq package not installed! Run: pip install groq")
             raise
-    
-    def generate_system_prompt(
-        self,
-        class_level: int,
-        subject: str,
-        language: str = 'hindi'
-    ) -> str:
-        """Generate context-aware system prompt"""
-        
-        if language in ['hindi', 'hi']:
-            if class_level <= 2:
-                prompt = f"""आप एक बहुत प्यारे और धैर्यवान शिक्षक हैं।
-
-छात्र: कक्षा {class_level} का बहुत छोटा बच्चा
-विषय: {subject}
-
-कृपया:
-1. बहुत-बहुत आसान शब्दों में बोलें
-2. छोटे-छोटे वाक्य बनाएं (3-4 शब्द)
-3. कहानियों और उदाहरणों से समझाएं
-4. हमेशा बच्चे की तारीफ करें
-5. 2-3 वाक्यों में जवाब दें"""
-            
-            elif class_level <= 5:
-                prompt = f"""आप एक अनुभवी और मिलनसार शिक्षक हैं।
-
-छात्र: कक्षा {class_level}
-विषय: {subject}
-
-कृपया:
-1. सरल हिंदी में समझाएं
-2. रोजमर्रा के उदाहरण दें
-3. 3-4 वाक्यों में जवाब दें
-4. बच्चे को प्रोत्साहित करें
-5. धैर्य से पढ़ाएं"""
-            
-            elif class_level <= 8:
-                prompt = f"""आप एक कुशल और समझदार शिक्षक हैं।
-
-छात्र: कक्षा {class_level}
-विषय: {subject}
-
-कृपया:
-1. स्पष्ट हिंदी में व्याख्या करें
-2. अच्छे उदाहरणों का प्रयोग करें
-3. 4-5 वाक्यों में विस्तार से बताएं
-4. तर्क और समझ पर ध्यान दें
-5. छात्र को सोचने के लिए प्रेरित करें"""
-            
-            else:  # class_level >= 9
-                prompt = f"""आप एक विशेषज्ञ और अनुभवी शिक्षक हैं।
-
-छात्र: कक्षा {class_level}
-विषय: {subject}
-
-कृपया:
-1. विस्तृत और गहन व्याख्या दें
-2. वैज्ञानिक तर्क और उदाहरण प्रस्तुत करें
-3. 5-6 वाक्यों में पूरी जानकारी दें
-4. परीक्षा की दृष्टि से महत्वपूर्ण बिंदु बताएं
-5. छात्र की सोच को विकसित करें"""
-        
-        else:  # English
-            if class_level <= 5:
-                prompt = f"""You are a friendly and patient teacher.
-
-Student: Class {class_level}
-Subject: {subject}
-
-Please:
-1. Use simple English
-2. Give everyday examples
-3. Answer in 3-4 sentences
-4. Be encouraging
-5. Be patient"""
-            
-            else:
-                prompt = f"""You are an experienced and knowledgeable teacher.
-
-Student: Class {class_level}
-Subject: {subject}
-
-Please:
-1. Explain clearly in English
-2. Provide detailed examples
-3. Answer in 4-5 sentences
-4. Focus on understanding
-5. Prepare for exams"""
-        
-        return prompt
-    
-    def search_knowledge_base(
-        self,
-        query: str,
-        class_level: int,
-        subject: str,
-        limit: int = 3
-    ) -> List[Dict]:
-        """
-        Search textbook knowledge base for relevant content
-        Uses RAG (Retrieval Augmented Generation) approach
-        """
-        try:
-            from ai_tutor.models import KnowledgeBase
-            
-            # Extract keywords from query
-            keywords = query.lower().split()[:5]
-            
-            # Search in knowledge base
-            knowledge_items = KnowledgeBase.objects.filter(
-                class_level=class_level,
-                subject__icontains=subject
-            )
-            
-            # Score each item based on keyword matches
-            scored_items = []
-            for item in knowledge_items:
-                score = sum(1 for keyword in keywords if keyword in item.text.lower())
-                if score > 0:
-                    scored_items.append((score, item))
-            
-            # Sort by relevance and get top results
-            scored_items.sort(reverse=True, key=lambda x: x[0])
-            top_items = [item[1] for item in scored_items[:limit]]
-            
-            return [
-                {
-                    'chapter': item.chapter,
-                    'content': item.text[:500],  # First 500 chars
-                    'class': item.class_level,
-                    'subject': item.subject
-                }
-                for item in top_items
-            ]
-        
         except Exception as e:
-            logger.error(f"Knowledge base search error: {str(e)}")
-            return []
+            logger.error(f"❌ Groq initialization failed: {e}")
+            raise
     
     def generate_response(
         self,
         question: str,
         class_level: int = 5,
         subject: str = 'General',
-        language: str = 'hindi',
+        language: str = 'english',
         conversation_history: Optional[List[Dict]] = None,
         include_knowledge: bool = True
     ) -> Dict:
-        """
-        Generate AI tutor response using FREE Groq API
-        Works perfectly on Android phones via cloud!
+        """Generate AI response using Groq"""
         
-        Cost: ₹0 per month (FREE!)
-        Limits: 30 requests/min, 6000/day (more than enough!)
-        """
         try:
-            if not self.use_groq:
-                return {
-                    'success': False,
-                    'error': 'Groq API not initialized',
-                    'response': self._get_fallback_response(language)
-                }
+            # Debug logging
+            logger.info(f"🔵 Generating response")
+            logger.info(f"🔵 Language: {language}")
+            logger.info(f"🔵 Question: {question[:100]}...")
             
-            # Build context from knowledge base
-            context = ""
-            knowledge_items = []
+            print(f"🔵 Generating response in: {language}")
+            print(f"🔵 Question: {question[:100]}...")
             
-            if include_knowledge:
-                knowledge_items = self.search_knowledge_base(
-                    question, class_level, subject
-                )
-                if knowledge_items:
-                    context = "\n\nसंबंधित पाठ्यक्रम सामग्री:\n"
-                    for idx, item in enumerate(knowledge_items, 1):
-                        context += f"\n{idx}. अध्याय: {item['chapter']}\n"
-                        context += f"   {item['content'][:300]}...\n"
-            
-            # Generate system prompt
+            # Build system prompt with specified language
             system_prompt = self.generate_system_prompt(
-                class_level, subject, language
+                class_level=class_level,
+                subject=subject,
+                language=language
             )
             
-            # Handle greetings
-            greetings = ['hi', 'hello', 'hey', 'नमस्ते', 'হাই', 'வணக்கம்', 'నమస్తే', 'नमस्कार']
-            if question.lower().strip() in greetings:
-                greeting_responses = {
-                    'hindi': 'नमस्ते! मैं आपका AI शिक्षक हूं। मैं आपकी पढ़ाई में मदद कर सकता हूं। कोई भी सवाल पूछें! 📚',
-                    'english': 'Hello! I am your AI tutor. I can help you with your studies. Ask me anything! 📚',
-                }
-                return {
-                    'success': True,
-                    'response': greeting_responses.get(language, greeting_responses['hindi']),
-                    'tokens_used': 0,
-                    'model': self.model,
-                    'has_knowledge': False
-                }
+            # Search knowledge base if needed
+            context_docs = []
+            if include_knowledge:
+                context_docs = self.search_knowledge_base(
+                    query=question,
+                    limit=3
+                )
             
-            # Build full prompt
-            if language in ['hindi', 'hi']:
-                user_message = f"""छात्र का प्रश्न: {question}
-{context}
-
-कृपया सरल हिंदी में उत्तर दें:"""
-            else:
-                user_message = f"""Student's question: {question}
-{context}
-
-Please answer in simple {language}:"""
+            # Build context
+            context = ""
+            if context_docs:
+                context = "\n\nRelevant information from textbooks:\n"
+                for doc in context_docs:
+                    context += f"- {doc.get('content', '')}\n"
+            
+            # Build messages
+            messages = [
+                {"role": "system", "content": system_prompt}
+            ]
+            
+            # Add conversation history if provided
+            if conversation_history:
+                messages.extend(conversation_history)
+            
+            # Add current question
+            user_message = question
+            if context:
+                user_message = f"{question}\n{context}"
+            
+            messages.append({"role": "user", "content": user_message})
+            
+            print(f"🔵 Calling Groq API with {language} prompt...")
             
             # Call Groq API
-            logger.info(f"🌐 Calling Groq API with model {self.model}")
-            
             response = self.client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message}
-                ],
+                messages=messages,
                 temperature=0.7,
-                max_tokens=500,
-                top_p=0.9,
+                max_tokens=1000
             )
             
-            answer = response.choices[0].message.content.strip()
+            answer = response.choices[0].message.content
             
-            logger.info(f"✅ Groq response generated successfully")
+            logger.info(f"🟢 Response generated successfully")
+            logger.info(f"🟢 Answer preview: {answer[:100]}...")
+            
+            print(f"🟢 Response generated in: {language}")
+            print(f"🟢 Answer preview: {answer[:100]}...")
             
             return {
-                'success': True,
-                'response': answer,
-                'tokens_used': 0,  # Groq is FREE!
-                'model': self.model,
-                'has_knowledge': bool(knowledge_items)
+                'answer': answer,
+                'metadata': {
+                    'model': self.model,
+                    'language': language,
+                    'context_used': len(context_docs) > 0,
+                    'sources': [doc.get('id') for doc in context_docs]
+                }
             }
-                
+            
         except Exception as e:
-            logger.error(f"❌ Error generating AI response: {str(e)}")
+            logger.error(f"🔴 Error generating response: {e}")
+            print(f"🔴 Error generating response: {e}")
+            import traceback
+            traceback.print_exc()
             return {
-                'success': False,
-                'error': str(e),
-                'response': self._get_fallback_response(language)
+                'answer': f"Sorry, I encountered an error: {str(e)}",
+                'metadata': {'error': str(e)}
             }
     
-    def _get_fallback_response(self, language: str) -> str:
-        """Fallback response if AI fails"""
-        responses = {
-            'hindi': "क्षमा करें, मैं अभी आपकी मदद नहीं कर पा रहा हूं। कृपया थोड़ी देर बाद फिर से कोशिश करें।",
-            'english': "Sorry, I cannot help you right now. Please try again later."
+    def generate_system_prompt(
+        self,
+        class_level: int,
+        subject: str,
+        language: str = 'english'
+    ) -> str:
+        """Generate system prompt based on parameters"""
+        
+        # Map language to full name
+        language_names = {
+            'english': 'English',
+            'hindi': 'Hindi',
+            'bengali': 'Bengali',
+            'tamil': 'Tamil',
+            'telugu': 'Telugu',
+            'marathi': 'Marathi'
         }
-        return responses.get(language, responses['hindi'])
+        
+        language_name = language_names.get(language.lower(), 'English')
+        
+        print(f"🔵 Creating system prompt in: {language_name}")
+        
+        # CRITICAL: Tell AI to respond in the specified language!
+        base_prompt = f"""You are an AI tutor for Indian government school students.
 
+CRITICAL INSTRUCTION: You MUST respond in {language_name} language ONLY!
+Even if the question is in a different language, your answer MUST be in {language_name}.
 
-# FREE Speech Services (Keep as is for future use)
+Student Level: Class {class_level}
+Subject: {subject}
+Response Language: {language_name}
 
-class FreeSpeechService:
-    """
-    FREE speech-to-text and text-to-speech using open source
-    """
+Your role:
+- Explain concepts clearly in {language_name}
+- Use simple language appropriate for Class {class_level} students
+- Provide examples from daily life
+- Be encouraging and supportive
+- Break down complex topics into simple steps
+- If the student asks a question in English but you must respond in {language_name}, translate your answer to {language_name}
+
+Remember: ALWAYS respond in {language_name}, no matter what language the question is in!
+
+Example:
+Question (English): "What is photosynthesis?"
+Your Answer (in {language_name}): [Explain photosynthesis in {language_name}]
+"""
+        
+        logger.info(f"🟢 System prompt created for: {language_name}")
+        
+        return base_prompt
     
-    @staticmethod
-    def text_to_speech_gtts(
-        text: str,
-        language: str = 'hi',
-        output_path: str = None
-    ) -> Dict:
-        """
-        FREE Text-to-Speech using gTTS
-        """
+    def search_knowledge_base(
+        self,
+        query: str,
+        limit: int = 3
+    ) -> List[Dict]:
+        """Search knowledge base for relevant content"""
+        
         try:
-            from gtts import gTTS
-            import uuid
+            # Try to import and use the knowledge base
+            from knowledge_base.models import TextbookEntry
             
-            tts = gTTS(text=text, lang=language, slow=False)
+            # Simple keyword search
+            results = TextbookEntry.objects.filter(
+                content__icontains=query
+            )[:limit]
             
-            if not output_path:
-                output_path = f"/tmp/tts_{uuid.uuid4()}.mp3"
+            return [{
+                'id': entry.id,
+                'content': entry.content[:200],  # Limit context length
+                'subject': getattr(entry, 'subject', 'General'),
+            } for entry in results]
             
-            tts.save(output_path)
-            
-            return {
-                'success': True,
-                'audio_path': output_path
-            }
-            
+        except ImportError:
+            logger.warning("Knowledge base not available")
+            return []
         except Exception as e:
-            logger.error(f"gTTS error: {str(e)}")
-            return {
-                'success': False,
-                'error': str(e),
-                'audio_path': None
-            }
+            logger.error(f"Error searching knowledge base: {e}")
+            return []
 
 
-# Export the main service class
-__all__ = ['AITutorService', 'FreeSpeechService']
+def get_ai_service():
+    """Factory function to get AI service instance"""
+    return AITutorService()

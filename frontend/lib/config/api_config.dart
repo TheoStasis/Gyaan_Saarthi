@@ -1,9 +1,11 @@
 class ApiConfig {
-  // Base URL
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  // ========================================
+  // BASE URL - UPDATE THIS TO YOUR COMPUTER'S IP
+  // ========================================
+  static const String baseUrl = 'http://192.168.137.1:8000'; // ← CHANGE IF NEEDED!
   
   // ========================================
-  // API Endpoints - CORRECTED
+  // API ENDPOINTS
   // ========================================
   
   // Auth endpoints
@@ -13,9 +15,9 @@ class ApiConfig {
   static const String userMe = '/api/auth/me/';
   static const String updateProfile = '/api/auth/me/update/';
   
-  // AI Tutor endpoints - FIXED ✅
+  // AI Tutor endpoints
   static const String conversations = '/api/ai-tutor/conversations/';
-  static const String chatText = '/api/ai-tutor/chat/text/';  // ✅ CORRECTED!
+  static const String chatText = '/api/ai-tutor/chat/text/';
   static const String chatAudio = '/api/ai-tutor/chat/audio/';
   static const String chatImage = '/api/ai-tutor/chat/image/';
   static const String feedback = '/api/ai-tutor/feedback/';
@@ -34,12 +36,16 @@ class ApiConfig {
   static const String gameProgress = '/api/games/progress/';
   static const String gameSessions = '/api/games/sessions/';
   
-  // Timeouts
-  static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 120);
-  static const Duration sendTimeout = Duration(seconds: 30);
+  // ========================================
+  // TIMEOUTS - INCREASED FOR AI PROCESSING
+  // ========================================
+  static const Duration connectTimeout = Duration(minutes: 3);  // ✅ 3 MINUTES!
+  static const Duration receiveTimeout = Duration(minutes: 5);  // ✅ 5 MINUTES!
+  static const Duration sendTimeout = Duration(minutes: 3);     // ✅ 3 MINUTES!
   
-  // Helper Methods
+  // ========================================
+  // HELPER METHODS
+  // ========================================
   static String conversationDetail(String id) => '$conversations$id/';
   static String quizDetail(String id) => '$quizzes$id/';
   static String videoDetail(String id) => '$videos$id/';
