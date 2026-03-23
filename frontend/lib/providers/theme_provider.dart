@@ -7,11 +7,11 @@ class ThemeProvider with ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
 
   ThemeProvider() {
-    _loadTheme();
+    _loadTheme().then((_) {}); // Safely executes the async function in the background
   }
 
   Future<void> _loadTheme() async {
-    final isDark = StorageService.getPreference('dark_mode') as bool?;
+    final isDark = await StorageService.getPreference('dark_mode') as bool?;
     _themeMode = (isDark ?? false) ? ThemeMode.dark : ThemeMode.light;
     notifyListeners();
   }
