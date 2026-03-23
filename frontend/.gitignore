@@ -46,3 +46,5 @@ app.*.map.json
 # Storage
 *.hive
 *.g.dart
+__pycache__/
+*.pyc
