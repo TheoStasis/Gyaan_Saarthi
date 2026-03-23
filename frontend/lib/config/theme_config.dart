@@ -106,6 +106,7 @@ class ThemeConfig {
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: secondaryColor,
       foregroundColor: Colors.white,
+
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       selectedItemColor: primaryColor,

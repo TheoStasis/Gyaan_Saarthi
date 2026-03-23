@@ -77,6 +77,7 @@ class _QuizListScreenState extends State<QuizListScreen> {
             ),
           );
         },
+        heroTag: null,
         icon: const Icon(Icons.add),
         label: const Text('Create Quiz'),
       ),

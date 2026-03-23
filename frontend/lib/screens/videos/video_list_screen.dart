@@ -116,6 +116,7 @@ class _VideoListScreenState extends State<VideoListScreen> {
             ),
           );
         },
+        heroTag: null,
         icon: const Icon(Icons.upload),
         label: const Text('Upload Video'),
       ),
