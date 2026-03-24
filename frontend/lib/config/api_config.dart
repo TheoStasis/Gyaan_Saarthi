@@ -2,7 +2,7 @@ class ApiConfig {
   // ========================================
   // BASE URL - UPDATE THIS TO YOUR COMPUTER'S IP
   // ========================================
-  static const String baseUrl = 'http://192.168.137.1:8000'; // ← CHANGE IF NEEDED!
+  static const String baseUrl = 'http://10.0.2.2:8000';// ← CHANGE IF NEEDED!
   
   // ========================================
   // API ENDPOINTS
